@@ -1,8 +1,8 @@
 package moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.Service.impl;
 
 import moe.takanashihoshino.nyaniduserserver.server.web.Public.UserResponse;
-import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.Accounts;
-import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.Repository.AccountsRepository;
+import moe.takanashihoshino.nyaniduserserver.entity.Accounts;
+import moe.takanashihoshino.nyaniduserserver.repository.AccountsRepository;
 import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.Service.UserService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;

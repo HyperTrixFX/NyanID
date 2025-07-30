@@ -3,9 +3,9 @@ package moe.takanashihoshino.nyaniduserserver.utils.Command.CommandList;
 import com.alibaba.fastjson2.JSONObject;
 import moe.takanashihoshino.nyaniduserserver.utils.Command.Command;
 import moe.takanashihoshino.nyaniduserserver.utils.RedisUtils.RedisService;
-import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.Repository.UserPermissionsRepository;
+import moe.takanashihoshino.nyaniduserserver.repository.UserPermissionsRepository;
 import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.Service.UserPermissionsService;
-import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.UserPermissions;
+import moe.takanashihoshino.nyaniduserserver.entity.UserPermissions;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.RestController;
 

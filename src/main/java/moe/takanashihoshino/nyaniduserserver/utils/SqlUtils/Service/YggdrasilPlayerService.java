@@ -1,6 +1,6 @@
 package moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.Service;
 
-import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.YggdrasilPlayer;
+import moe.takanashihoshino.nyaniduserserver.entity.YggdrasilPlayer;
 
 public interface YggdrasilPlayerService {
 

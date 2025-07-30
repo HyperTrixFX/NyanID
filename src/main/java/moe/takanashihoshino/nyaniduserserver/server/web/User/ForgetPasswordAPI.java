@@ -8,11 +8,10 @@ import jakarta.servlet.http.HttpServletResponse;
 import moe.takanashihoshino.nyaniduserserver.utils.ErrUtils.ErrRes;
 import moe.takanashihoshino.nyaniduserserver.utils.ErrUtils.SJson;
 import moe.takanashihoshino.nyaniduserserver.utils.RedisUtils.RedisService;
-import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.Repository.AccountsRepository;
+import moe.takanashihoshino.nyaniduserserver.repository.AccountsRepository;
 import moe.takanashihoshino.nyaniduserserver.utils.EmailHelper.EmailService;
 import moe.takanashihoshino.nyaniduserserver.utils.OtherUtils;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.InvalidKeyException;
@@ -38,7 +37,7 @@ private final RedisService redisService;
 @Value("${NyanidSetting.encryptionKey}")
 private String encryptionKey;
 
-@Async
+
 @PostMapping(produces = "application/json")
 public <T> Object VerifyCode(@RequestBody(required = false) T data, HttpServletResponse response, HttpServletRequest request) throws NoSuchAlgorithmException, InvalidKeyException {
         if (data != null){

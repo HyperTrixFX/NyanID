@@ -1,9 +1,9 @@
 package moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.Service.impl;
 
 
-import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.Repository.UserPermissionsRepository;
+import moe.takanashihoshino.nyaniduserserver.repository.UserPermissionsRepository;
 import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.Service.UserPermissionsService;
-import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.UserPermissions;
+import moe.takanashihoshino.nyaniduserserver.entity.UserPermissions;
 import org.springframework.stereotype.Service;
 
 @Service

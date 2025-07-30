@@ -11,14 +11,13 @@ import moe.takanashihoshino.nyaniduserserver.utils.ErrUtils.ErrorCode;
 import moe.takanashihoshino.nyaniduserserver.utils.ErrUtils.SJson;
 import moe.takanashihoshino.nyaniduserserver.utils.OtherUtils;
 import moe.takanashihoshino.nyaniduserserver.utils.RedisUtils.RedisService;
-import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.Accounts;
-import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.NyanIDuser;
-import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.Repository.AccountsRepository;
-import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.Repository.NyanIDuserRepository;
-import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.Repository.UserDevicesRepository;
-import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.Repository.YggdrasilRepository;
+import moe.takanashihoshino.nyaniduserserver.entity.Accounts;
+import moe.takanashihoshino.nyaniduserserver.entity.NyanIDuser;
+import moe.takanashihoshino.nyaniduserserver.repository.AccountsRepository;
+import moe.takanashihoshino.nyaniduserserver.repository.NyanIDuserRepository;
+import moe.takanashihoshino.nyaniduserserver.repository.UserDevicesRepository;
+import moe.takanashihoshino.nyaniduserserver.repository.YggdrasilRepository;
 import moe.takanashihoshino.nyaniduserserver.websocket.server.BungeeConnectHandle;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -32,22 +31,15 @@ import java.util.Objects;
 @RestController
 @RequestMapping("api/zako/v1/userdata")
 public class UserDataApi {
-
-
     private final NyanIDuserRepository nyanIDuserRepository;
-
 
     private final UserDevicesRepository userDevicesRepository;
 
-
     private final YggdrasilRepository yggdrasilRepository;
-
 
     private final AccountsRepository accountsRepository;
 
-
     private final EmailService emailService;
-
 
     private final RedisService redisService;
 
@@ -60,7 +52,6 @@ public class UserDataApi {
         this.redisService = redisService;
     }
 
-    @Async
     @PostMapping(produces = "application/json")
     public <T> Object PostMethod(@RequestBody(required = false) T data, HttpServletResponse response, HttpServletRequest request){
         String Authorization = request.getHeader("Authorization");
@@ -184,7 +175,6 @@ public class UserDataApi {
         return JSONObject.toJSONString(error);
     }
 
-    @Async
     public void SaveUserAvatar(String uid, MultipartFile avatar) throws IOException {
         Path UserAvatar = Paths.get("Data/UserAvatar/UA-");
         File originalFile = new File(UserAvatar+uid+".png");
@@ -194,7 +184,6 @@ public class UserDataApi {
         }else {
             OtherUtils.reduceImageByRatio(avatar.getInputStream(), UserAvatar,uid,1, 1);
         }
-//        String newavatarMD5 = DigestUtils.md5DigestAsHex(avatar.getBytes());
     }
 
     public static SJson success(String message,int code){

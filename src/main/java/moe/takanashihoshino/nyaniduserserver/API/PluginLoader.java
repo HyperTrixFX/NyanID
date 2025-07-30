@@ -33,7 +33,7 @@ public class PluginLoader implements  ApplicationListener<ContextClosedEvent>, I
                 Plugin plugin = getPlugin(Collections.singletonList(url));
                 if (plugin != null ) {
                     logger.info("[NyanID-UserServer] [" + LocalDateTime.now() + "] : Loading :" + plugin.PluginName());
-                    plugin.onLoad();
+                    plugin.onEnable();
 
                 } else {
                     logger.warning("Failed to load plugin." );

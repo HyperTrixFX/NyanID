@@ -2,8 +2,8 @@ package moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.Service.impl;
 
 
 import moe.takanashihoshino.nyaniduserserver.server.web.User.UserJson.BanUserListJson;
-import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.BanUserList;
-import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.Repository.BanUserRepository;
+import moe.takanashihoshino.nyaniduserserver.entity.BanUserList;
+import moe.takanashihoshino.nyaniduserserver.repository.BanUserRepository;
 import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.Service.BanUserService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;

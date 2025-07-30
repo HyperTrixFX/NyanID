@@ -1,9 +1,9 @@
 package moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.Service.impl;
 
 import moe.takanashihoshino.nyaniduserserver.server.web.User.UserJson.UserDevicesJson;
-import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.Repository.UserDevicesRepository;
+import moe.takanashihoshino.nyaniduserserver.repository.UserDevicesRepository;
 import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.Service.UserDevicesService;
-import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.UserDevices;
+import moe.takanashihoshino.nyaniduserserver.entity.UserDevices;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;

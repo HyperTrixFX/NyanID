@@ -1,13 +1,11 @@
 package moe.takanashihoshino.nyaniduserserver;
 
-import moe.takanashihoshino.nyaniduserserver.utils.Reload.Refreshable;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.data.redis.repository.configuration.EnableRedisRepositories;
-import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 import java.io.File;
@@ -22,10 +20,9 @@ import java.util.List;
 import java.util.Objects;
 import java.util.logging.Logger;
 
-    @Refreshable
+
     @SpringBootApplication
     @EnableScheduling
-    @EnableAsync
     @EnableJpaRepositories(basePackages = "moe.takanashihoshino.nyaniduserserver.utils.SqlUtils")
     @EnableRedisRepositories(basePackages = "moe.takanashihoshino.nyaniduserserver.utils.RedisUtils")
     public class NyanIdUserserverApplication {
@@ -59,7 +56,8 @@ import java.util.logging.Logger;
                 Logger.getLogger("NyanID").info("[NyanID-UserServer] ["+ LocalDateTime.now() +"] : Code By TakanashiHoshino");
                 Logger.getLogger("NyanID").info("[NyanID-UserServer] ["+ LocalDateTime.now() +"] : 爱来自ABYDOS喵~");
             } else if (Files.exists(targetPath)) {
-                Path sensiwords = Paths.get("Data/IllegalWords/sensi_words.txt");
+                Path sensiwords = Paths.get("Data/IllegalWords/sen" +
+                        "si_words.txt");
                 File file = new File(sensiwords.toString());
                 if (file.canRead() && file.exists()){
                     FileInputStream fileInputStream = new FileInputStream(file);

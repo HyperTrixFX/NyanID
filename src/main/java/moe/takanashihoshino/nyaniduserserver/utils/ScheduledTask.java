@@ -1,6 +1,6 @@
 package moe.takanashihoshino.nyaniduserserver.utils;
 
-import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.Repository.UserDevicesRepository;
+import moe.takanashihoshino.nyaniduserserver.repository.UserDevicesRepository;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;

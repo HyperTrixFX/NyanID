@@ -1,6 +1,6 @@
 package moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.Service;
 
-import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.UserDevices;
+import moe.takanashihoshino.nyaniduserserver.entity.UserDevices;
 
 public interface UserDevicesService {
 

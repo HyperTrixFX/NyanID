@@ -1,9 +1,9 @@
 package moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.Service.impl;
 
 
-import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.Repository.YggdrasilPlayerRepository;
+import moe.takanashihoshino.nyaniduserserver.repository.YggdrasilPlayerRepository;
 import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.Service.YggdrasilPlayerService;
-import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.YggdrasilPlayer;
+import moe.takanashihoshino.nyaniduserserver.entity.YggdrasilPlayer;
 import org.springframework.stereotype.Service;
 
 @Service

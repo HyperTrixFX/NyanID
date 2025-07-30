@@ -1,7 +1,7 @@
 package moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.Service.impl;
 
-import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.NyanIDuser;
-import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.Repository.NyanIDuserRepository;
+import moe.takanashihoshino.nyaniduserserver.entity.NyanIDuser;
+import moe.takanashihoshino.nyaniduserserver.repository.NyanIDuserRepository;
 import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.Service.NyanidUserService;
 import org.springframework.stereotype.Service;
 

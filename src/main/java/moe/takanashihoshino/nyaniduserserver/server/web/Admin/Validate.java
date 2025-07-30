@@ -5,8 +5,8 @@ import com.alibaba.fastjson2.JSONObject;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import moe.takanashihoshino.nyaniduserserver.utils.ErrUtils.ErrRes;
-import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.Repository.UserDevicesRepository;
-import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.Repository.UserPermissionsRepository;
+import moe.takanashihoshino.nyaniduserserver.repository.UserDevicesRepository;
+import moe.takanashihoshino.nyaniduserserver.repository.UserPermissionsRepository;
 import org.springframework.web.bind.annotation.*;
 
 @RestController

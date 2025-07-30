@@ -6,7 +6,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import moe.takanashihoshino.nyaniduserserver.server.web.User.UserJson.UserDevicesJson;
 import moe.takanashihoshino.nyaniduserserver.utils.ErrUtils.ErrRes;
-import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.Repository.UserDevicesRepository;
+import moe.takanashihoshino.nyaniduserserver.repository.UserDevicesRepository;
 import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.Service.impl.UserDevicesServiceImpl;
 import org.springframework.web.bind.annotation.*;
 

@@ -1,9 +1,9 @@
 package moe.takanashihoshino.nyaniduserserver.utils.Command.CommandList;
 
 import moe.takanashihoshino.nyaniduserserver.utils.Command.Command;
-import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.BanUserList;
-import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.Repository.AccountsRepository;
-import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.Repository.BanUserRepository;
+import moe.takanashihoshino.nyaniduserserver.entity.BanUserList;
+import moe.takanashihoshino.nyaniduserserver.repository.AccountsRepository;
+import moe.takanashihoshino.nyaniduserserver.repository.BanUserRepository;
 import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.Service.BanUserService;
 import org.springframework.stereotype.Component;
 

@@ -10,9 +10,9 @@ import jakarta.websocket.server.PathParam;
 import jakarta.websocket.server.ServerEndpoint;
 import lombok.extern.slf4j.Slf4j;
 import moe.takanashihoshino.nyaniduserserver.utils.RedisUtils.RedisService;
-import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.Accounts;
-import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.Repository.AccountsRepository;
-import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.Repository.ServerListRepository;
+import moe.takanashihoshino.nyaniduserserver.entity.Accounts;
+import moe.takanashihoshino.nyaniduserserver.repository.AccountsRepository;
+import moe.takanashihoshino.nyaniduserserver.repository.ServerListRepository;
 import moe.takanashihoshino.nyaniduserserver.websocket.Messages.UpdateOnlineSuccess;
 import moe.takanashihoshino.nyaniduserserver.websocket.packet.S32;
 import org.springframework.beans.BeansException;
@@ -36,7 +36,6 @@ public class BungeeConnectHandle implements ApplicationContextAware {
     private static AccountsRepository accountsRepository;
     private static AtomicInteger onlineCount = new AtomicInteger(0);
     private static CopyOnWriteArraySet<BungeeConnectHandle> webSocketSet = new CopyOnWriteArraySet<>();
-
     private Session session;
 
     @Override

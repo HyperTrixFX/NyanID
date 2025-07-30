@@ -1,8 +1,8 @@
 package moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.Service.impl;
 
-import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.Repository.YggdrasilRepository;
+import moe.takanashihoshino.nyaniduserserver.repository.YggdrasilRepository;
 import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.Service.YggdrasilService;
-import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.Yggdrasil;
+import moe.takanashihoshino.nyaniduserserver.entity.Yggdrasil;
 import org.springframework.stereotype.Service;
 
 @Service

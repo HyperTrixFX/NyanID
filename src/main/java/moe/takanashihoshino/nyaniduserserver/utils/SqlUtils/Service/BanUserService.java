@@ -1,7 +1,7 @@
 package moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.Service;
 
 
-import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.BanUserList;
+import moe.takanashihoshino.nyaniduserserver.entity.BanUserList;
 
 public interface BanUserService {
 

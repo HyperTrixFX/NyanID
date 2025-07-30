@@ -1,8 +1,8 @@
 package moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.Service.impl;
 
-import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.Repository.TexturesListRepository;
+import moe.takanashihoshino.nyaniduserserver.repository.TexturesListRepository;
 import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.Service.TexturesListService;
-import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.TexturesList;
+import moe.takanashihoshino.nyaniduserserver.entity.TexturesList;
 import org.springframework.stereotype.Service;
 
 

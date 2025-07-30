@@ -10,13 +10,14 @@ import moe.takanashihoshino.nyaniduserserver.server.YggdrasilServer.Authserver.J
 import moe.takanashihoshino.nyaniduserserver.utils.ErrUtils.ErrRes;
 import moe.takanashihoshino.nyaniduserserver.utils.RedisUtils.RedisService;
 import moe.takanashihoshino.nyaniduserserver.utils.RsaUtil;
-import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.Repository.UserDevicesRepository;
-import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.Repository.YggdrasilPlayerRepository;
-import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.Repository.YggdrasilRepository;
-import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.Yggdrasil;
+import moe.takanashihoshino.nyaniduserserver.repository.UserDevicesRepository;
+import moe.takanashihoshino.nyaniduserserver.repository.YggdrasilPlayerRepository;
+import moe.takanashihoshino.nyaniduserserver.repository.YggdrasilRepository;
+import moe.takanashihoshino.nyaniduserserver.entity.Yggdrasil;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
@@ -36,6 +37,10 @@ public class Sessionserver {
 
     private final RedisService redisService;
 
+    private final String  MojangAuthUrl = "https://api.minecraftservices.com/entitlements/license";
+
+    private final String MojangSessionUrl = "https://sessionserver.mojang.com";
+
     @Value("${yggdrasil.APILocation}")
     private String APILocation;
 
@@ -50,7 +55,7 @@ public class Sessionserver {
     }
 
     @PostMapping("join")
-    public <T> Object ClientJoinServerHandle(@RequestBody(required = false) T data,HttpServletResponse response, HttpServletRequest request){
+    public <T> Object ClientJoinServerHandle(@RequestBody(required = false) T data,HttpServletResponse response, HttpServletRequest request) throws IOException {
         if (data != null) {
             JSONObject json = JSONObject.parseObject(JSONObject.toJSONString(data));
             if (json.containsKey("accessToken") && json.containsKey("selectedProfile")){
@@ -82,9 +87,40 @@ public class Sessionserver {
                                         return ErrRes.YggdrasilError("令牌有效,但似乎您并没有Yggdrasil账户杂鱼喵~!", "ForbiddenOperationException", "ForbiddenOperationException", 403, response);
                                     }
                             }else {
+//                                System.out.println("客户端加入验证M");
+//                                OkHttpClient client = new OkHttpClient();
+//                                System.out.println(accessToken);
+//                                System.out.println(serverId);
+//                                Request req = new Request.Builder()
+//                                        .url(MojangAuthUrl)
+//                                        .addHeader("Authorization","Bearer  "+accessToken)
+//                                        .post(null)
+//                                        .build();
+//                                Response respon = client.newCall(req).execute();
+//                                if (respon.code() == 200 && respon.isSuccessful()) {
+//                                    System.out.println(respon.code() );
+//                                    respon.close();
+//                                    okhttp3.RequestBody body1 = okhttp3.RequestBody.create(okhttp3.MediaType.parse("application/json;charset=utf-8"),data.toString());
+//                                    Request req1 = new Request.Builder()
+//                                            .url(MojangSessionUrl+"/session/minecraft/join")
+//                                            .post(body1)
+//                                            .build();
+//                                    Response respon1 = client.newCall(req1).execute();
+//                                    if (respon.isSuccessful() && respon1.code() == 204 ){
+//                                        respon1.close();
+//                                        response.setStatus(204);
+//                                        return null;
+//                                    }else {
+//                                        respon1.close();
+//                                        return ErrRes.YggdrasilError("令牌在Mojang或本验证服务器无效杂鱼喵~!","ForbiddenOperationException","ForbiddenOperationException",403,response);
+//                                    }
+//                                }else {
+//                                    respon.close();
+//                                    return ErrRes.YggdrasilError("令牌在Mojang或本验证服务器无效杂鱼喵~!","ForbiddenOperationException","ForbiddenOperationException",403,response);
+//                                }
                                 return ErrRes.YggdrasilError("令牌无效杂鱼喵~!","ForbiddenOperationException","ForbiddenOperationException",403,response);
-                            }
-                    }else {
+                                }
+                            }else {
                             return ErrRes.YggdrasilError("你请求的json中缺少重要参数serverId杂鱼喵~!","The parameter is incorrect","The parameter is incorrect 杂鱼喵~",403,response);
                         }
                     }else {
@@ -155,9 +191,28 @@ public class Sessionserver {
                             yggdrasil.getPlayername(),
                             properties
                     );
-
-
                  }else {
+//                    System.out.println("加入服务器验证M");
+//                    OkHttpClient client = new OkHttpClient();
+//                    Request req = new Request.Builder()
+//                            .url(MojangSessionUrl+"/session/minecraft/hasJoined?username="+username+"&serverId="+serverId)
+//                            .addHeader("Authorization","Bearer  "+accessToken)
+//                            .get()
+//                            .build();
+//                    Response respon = client.newCall(req).execute();
+//                    okhttp3.ResponseBody responseBody = respon.body();
+//                    if (responseBody != null && respon.code() == 200) {
+//                        System.out.println(respon.body().string());
+//                        responseBody.close();
+//                        return responseBody.string();
+//                    }else {
+//                        if (respon.body() != null) {
+//                            System.out.println(respon.body().string());
+//                        }
+//                        respon.close();
+//                        return ErrRes.YggdrasilError("无效的会话杂鱼喵!","ForbiddenOperationException","ForbiddenOperationException",403,response);
+//                    }
+
                     return ErrRes.YggdrasilError("无效的会话杂鱼喵!","ForbiddenOperationException","ForbiddenOperationException",403,response);
                 }
                 }else {

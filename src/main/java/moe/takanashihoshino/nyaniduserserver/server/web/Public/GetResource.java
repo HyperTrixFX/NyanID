@@ -2,8 +2,8 @@ package moe.takanashihoshino.nyaniduserserver.server.web.Public;
 
 import jakarta.servlet.http.HttpServletResponse;
 import moe.takanashihoshino.nyaniduserserver.utils.ErrUtils.ErrRes;
-import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.Repository.BanUserRepository;
-import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.Repository.NyanIDuserRepository;
+import moe.takanashihoshino.nyaniduserserver.repository.BanUserRepository;
+import moe.takanashihoshino.nyaniduserserver.repository.NyanIDuserRepository;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;

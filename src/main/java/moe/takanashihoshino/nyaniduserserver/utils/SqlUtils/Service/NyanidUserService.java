@@ -1,6 +1,6 @@
 package moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.Service;
 
-import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.NyanIDuser;
+import moe.takanashihoshino.nyaniduserserver.entity.NyanIDuser;
 
 public interface NyanidUserService {
 
