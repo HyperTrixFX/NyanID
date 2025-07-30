@@ -1,4 +1,4 @@
-package moe.takanashihoshino.nyaniduserserver.utils.QQbotUtils.impl;
+package moe.takanashihoshino.nyaniduserserver.QQbotUtils.impl;
 
 import org.springframework.stereotype.Component;
 

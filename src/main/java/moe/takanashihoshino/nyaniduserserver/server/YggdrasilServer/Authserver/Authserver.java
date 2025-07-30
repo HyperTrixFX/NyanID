@@ -10,7 +10,6 @@ import moe.takanashihoshino.nyaniduserserver.server.YggdrasilServer.Authserver.J
 import moe.takanashihoshino.nyaniduserserver.utils.ErrUtils.ErrRes;
 import moe.takanashihoshino.nyaniduserserver.utils.OtherUtils;
 import moe.takanashihoshino.nyaniduserserver.utils.RedisUtils.RedisService;
-import moe.takanashihoshino.nyaniduserserver.utils.RsaUtil;
 import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.Repository.*;
 import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.Service.UserDevicesService;
 import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.UserDevices;
@@ -24,8 +23,6 @@ import org.springframework.web.bind.annotation.RestController;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
-
-import static moe.takanashihoshino.nyaniduserserver.utils.RsaUtil.RSA_SIGNATURE_ALGORITHM;
 
 
 @RestController

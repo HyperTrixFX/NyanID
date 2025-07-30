@@ -20,5 +20,9 @@ public class UUIDUtil {
         return String.valueOf(UUID.nameUUIDFromBytes(("BungeeServer:" + sid).getBytes(StandardCharsets.UTF_8)));
     }
 
+    public static String get(String sid){
+        return String.valueOf(UUID.nameUUIDFromBytes(("O4F1569" + sid).getBytes(StandardCharsets.UTF_8)));
+    }
+
 
 }

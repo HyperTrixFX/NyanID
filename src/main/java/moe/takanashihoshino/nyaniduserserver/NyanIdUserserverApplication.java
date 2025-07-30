@@ -7,8 +7,8 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.data.redis.repository.configuration.EnableRedisRepositories;
+import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
-import toolgood.words.WordsMatch;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -22,12 +22,13 @@ import java.util.List;
 import java.util.Objects;
 import java.util.logging.Logger;
 
-@Refreshable
-@SpringBootApplication
-@EnableScheduling
-@EnableJpaRepositories(basePackages = "moe.takanashihoshino.nyaniduserserver.utils.SqlUtils")
-@EnableRedisRepositories(basePackages = "moe.takanashihoshino.nyaniduserserver.utils.RedisUtils")
-public class NyanIdUserserverApplication {
+    @Refreshable
+    @SpringBootApplication
+    @EnableScheduling
+    @EnableAsync
+    @EnableJpaRepositories(basePackages = "moe.takanashihoshino.nyaniduserserver.utils.SqlUtils")
+    @EnableRedisRepositories(basePackages = "moe.takanashihoshino.nyaniduserserver.utils.RedisUtils")
+    public class NyanIdUserserverApplication {
     public static  Path configPath = Paths.get("config");
     public static  Path DataPath = Paths.get("Data");
     public static Path UserAvatar = Paths.get("Data/UserAvatar");
@@ -37,8 +38,6 @@ public class NyanIdUserserverApplication {
     public static Path YggdrasilTexture = Paths.get("Data/YggdrasilTexture");
     public static Path PluginsPath = Paths.get("plugins");
     private HashMap <Class<?>,Class> Clazz = new HashMap<>();
-
-    public static WordsMatch iwords = new WordsMatch();
 
     public static void main(String[] args) throws Exception {
         Logger.getLogger("NyanID").info("[NyanID-UserServer] ["+ LocalDateTime.now() +"] ConfigPath: /config");
@@ -62,15 +61,10 @@ public class NyanIdUserserverApplication {
             } else if (Files.exists(targetPath)) {
                 Path sensiwords = Paths.get("Data/IllegalWords/sensi_words.txt");
                 File file = new File(sensiwords.toString());
-                if (file.canRead()){
+                if (file.canRead() && file.exists()){
                     FileInputStream fileInputStream = new FileInputStream(file);
-
                     List<String> list=new ArrayList<String>();
                     list.add(new String(fileInputStream.readAllBytes()));
-//                    iwords.SetKeywords(list);
-//                    Map<String,String> KeyMap = RsaUtil.generateKey();
-//                    Logger.getLogger("NyanID").info(KeyMap.get("privateKeyStr"));
-//                    Logger.getLogger("NyanID").info(KeyMap.get("publicKeyStr"));
                     Logger.getLogger("NyanID").info("[NyanID-UserServer] ["+ LocalDateTime.now() +"] : 敏感词加载完毕");
                 }else Logger.getLogger("NyanID").warning("[NyanID-UserServer] ["+ LocalDateTime.now() +"] : 未检测到敏感词库文件,所有涉及文本将设置为Bypass");
                 SpringApplication.run(NyanIdUserserverApplication.class, args);

@@ -1,8 +1,8 @@
-package moe.takanashihoshino.nyaniduserserver.utils.QQbotUtils;
+package moe.takanashihoshino.nyaniduserserver.QQbotUtils;
 
 
 import jakarta.annotation.PostConstruct;
-import moe.takanashihoshino.nyaniduserserver.utils.QQbotUtils.impl.onMessage;
+import moe.takanashihoshino.nyaniduserserver.QQbotUtils.impl.onMessage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;

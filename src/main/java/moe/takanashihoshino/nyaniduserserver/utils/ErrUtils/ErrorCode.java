@@ -7,10 +7,9 @@ public enum ErrorCode {
     NotFoundAccount(404,"Not Found Account"),
     MethodNotAllowed(405,"Method Not Allowed"),
     Unauthorized(401,"Unauthorized"),
-    Dimples1337(999,"Don't Hacking,Fuck You!"),
+    Dimples1337(999,"Your IP access frequency is too high and has been restricted from access."),
     NotFoundResource(404,"Not Found Resource"),
     ForbiddenOperationException(403,"ForbiddenOperationException"),
-
     IllegalArgumentException(400,"IllegalArgumentException");
 
     private final int code;

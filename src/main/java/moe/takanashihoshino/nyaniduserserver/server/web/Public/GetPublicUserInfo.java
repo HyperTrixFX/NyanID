@@ -30,7 +30,6 @@ public class GetPublicUserInfo {
     }
 
 
-    @Async
     @GetMapping(produces = "application/json")
     public Object GETMethod(@PathVariable String uuid, HttpServletResponse response) {
         if (banUserRepository.findBanIDByUid(uuid) == null ) {

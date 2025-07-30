@@ -29,7 +29,16 @@ public interface YggdrasilRepository extends JpaRepository<Yggdrasil, String>, S
 
     @Modifying
     @Transactional
-    @Query(value = "UPDATE Yggdrasil SET playername = ?1 where nyanuid = ?2")
-    void UpdatePlayerName(String PlayerNAME, String uid);
+    @Query(value = "UPDATE Yggdrasil y SET y.playername = ?1 where y.nyanuid = ?2")
+    void UpdatePlayerName(String n, String uid);
+
+    @Modifying
+    @Transactional
+    @Query(value = "UPDATE Yggdrasil y SET  y.useSkin = ?1 where y.nyanuid = ?2 OR y.uuid = ?2")
+    void UpdateUseSkin(Boolean b, String uid);
+    @Modifying
+    @Transactional
+    @Query(value = "UPDATE Yggdrasil y SET  y.useCAPE = ?1 where y.nyanuid = ?2 OR y.uuid = ?2")
+    void UpdateUseCAPE(Boolean b, String uid);
 
 }

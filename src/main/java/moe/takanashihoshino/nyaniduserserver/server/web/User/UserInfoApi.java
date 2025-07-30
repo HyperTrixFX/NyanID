@@ -92,11 +92,5 @@ public class UserInfoApi {
                 jsonObject.put("mcuid",MCUUID);
             }
             return jsonObject;
-
-
-
-
-
-
     }
 }

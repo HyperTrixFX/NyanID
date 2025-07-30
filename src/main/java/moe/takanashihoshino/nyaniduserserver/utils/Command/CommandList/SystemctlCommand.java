@@ -47,14 +47,17 @@ public class SystemctlCommand implements Command {
                         data.put("NotificationTypeName", args[3]);
                         Logger.getLogger("NyanID").info("设置成功");
                         redisService.setValueWithExpiration("ServerInfo",data,Long.parseLong(args[4]),java.util.concurrent.TimeUnit.SECONDS);
+                        break;
                     }else {
                         Logger.getLogger("NyanID").info("设置全站通知失败");
+                        break;
                     }
                 }
                 case "adminpwd":{
                     if (args[1] == "rest"){
                         userPermissionsRepository.deleteAll();
                         Logger.getLogger("NyanID").info("已删除全部管理员");
+                        break;
                     }else {
                         UserPermissions userPermissions = new UserPermissions();
                         userPermissions.setUid(args[4]);
@@ -63,10 +66,14 @@ public class SystemctlCommand implements Command {
                         userPermissions.setUserGroup("⨉NEKO HACKER⨉");
                         userPermissionsService.save(userPermissions);
                         Logger.getLogger("NyanID").info("设置成功");
+                        break;
                     }
-
-
                 }
+
+
+                default:
+                    Logger.getLogger("NyanID").warning("未知systemctl命令参数");
+
             }
             }
     }

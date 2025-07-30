@@ -4,7 +4,6 @@ import com.alibaba.fastjson2.JSONObject;
 import jakarta.servlet.http.HttpServletResponse;
 import moe.takanashihoshino.nyaniduserserver.utils.ErrUtils.SJson;
 import moe.takanashihoshino.nyaniduserserver.utils.OtherUtils;
-import moe.takanashihoshino.nyaniduserserver.websocket.Messages.BungeeSuccessConnect;
 import moe.takanashihoshino.nyaniduserserver.websocket.server.BungeeConnectHandle;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.GetMapping;

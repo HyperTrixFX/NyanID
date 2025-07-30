@@ -3,9 +3,7 @@ package moe.takanashihoshino.nyaniduserserver.API;
 
 import lombok.SneakyThrows;
 import org.springframework.beans.factory.InitializingBean;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationListener;
-import org.springframework.context.annotation.Scope;
 import org.springframework.context.event.ContextClosedEvent;
 import org.springframework.stereotype.Component;
 
@@ -15,10 +13,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Enumeration;
-import java.util.List;
+import java.util.*;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.logging.Logger;
@@ -80,8 +75,7 @@ public class PluginLoader implements  ApplicationListener<ContextClosedEvent>, I
                         String className = entry.getName().substring(0, entry.getName().length() - 6).replace('/', '.');
                         Class<?> clazz = classLoader.loadClass(className);
                         if (Plugin.class.isAssignableFrom(clazz)) {
-                            Plugin plugin = (Plugin) clazz.getDeclaredConstructor().newInstance();
-                            return plugin;
+                            return (Plugin) clazz.getDeclaredConstructor().newInstance();
                         }
                     }
                 }
@@ -93,8 +87,7 @@ public class PluginLoader implements  ApplicationListener<ContextClosedEvent>, I
     @SneakyThrows
     @Override
     public void onApplicationEvent(ContextClosedEvent event) {
-        getPlugin(getUrls()).onDisable();
-
+        Objects.requireNonNull(getPlugin(getUrls())).onDisable();
     }
 
 

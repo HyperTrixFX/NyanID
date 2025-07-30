@@ -66,7 +66,7 @@ public class GetResource {
 
                 case "textures":{
                     if (data.length() > 1) {
-                        Path SKINTexture = Paths.get("Data/YggdrasilTexture/" + data + ".png");
+                        Path SKINTexture = Paths.get("Data/YggdrasilTexture/hash-" + data);
                             File file = new File(SKINTexture.toString());
                             if (file.exists()) {
                                 response.setContentType("image/png");

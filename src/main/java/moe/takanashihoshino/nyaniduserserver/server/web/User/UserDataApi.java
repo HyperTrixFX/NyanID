@@ -4,18 +4,17 @@ package moe.takanashihoshino.nyaniduserserver.server.web.User;
 import com.alibaba.fastjson2.JSONObject;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import moe.takanashihoshino.nyaniduserserver.utils.EmailHelper.EmailService;
 import moe.takanashihoshino.nyaniduserserver.utils.ErrUtils.ErrRes;
 import moe.takanashihoshino.nyaniduserserver.utils.ErrUtils.Error;
 import moe.takanashihoshino.nyaniduserserver.utils.ErrUtils.ErrorCode;
 import moe.takanashihoshino.nyaniduserserver.utils.ErrUtils.SJson;
-import moe.takanashihoshino.nyaniduserserver.utils.PngValidator;
+import moe.takanashihoshino.nyaniduserserver.utils.OtherUtils;
 import moe.takanashihoshino.nyaniduserserver.utils.RedisUtils.RedisService;
 import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.Accounts;
 import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.NyanIDuser;
 import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.Repository.AccountsRepository;
 import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.Repository.NyanIDuserRepository;
-import moe.takanashihoshino.nyaniduserserver.utils.EmailHelper.EmailService;
-import moe.takanashihoshino.nyaniduserserver.utils.OtherUtils;
 import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.Repository.UserDevicesRepository;
 import moe.takanashihoshino.nyaniduserserver.utils.SqlUtils.Repository.YggdrasilRepository;
 import moe.takanashihoshino.nyaniduserserver.websocket.server.BungeeConnectHandle;
@@ -154,7 +153,6 @@ public class UserDataApi {
     @PutMapping(produces = "application/json")
     public <T> Object PutMethod(@RequestParam(value = "avatar", required = false) T avatar, HttpServletRequest request , HttpServletResponse response) throws IOException {
         if (avatar  != null ){
-            if (PngValidator.isValidPng((MultipartFile) avatar)){
             MultipartFile avatarFile = (MultipartFile) avatar;
             if (!request.getContentType().matches("multipart/form-data") &&avatarFile.getContentType() != null){
                 String ContentType = avatarFile.getContentType();
@@ -172,8 +170,6 @@ public class UserDataApi {
             }else {
                 return ErrRes.IllegalRequestException("RequestParam avatar is NULL  MiaoWu~",response);
             }
-        }else return ErrRes.IllegalRequestException("非法图像文件喵！",response);
-
         }else return ErrRes.IllegalRequestException("RequestParam avatar is NULL  MiaoWu~",response);
     }
 

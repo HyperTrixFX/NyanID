@@ -29,7 +29,9 @@ public class WebConfig implements WebMvcConfigurer {
                 .addPathPatterns("/api/yggdrasil/authserver/**")
                 .addPathPatterns("/api/zako/v1/login")
                 .addPathPatterns("/api/zako/v1/login/2fa")
-                .addPathPatterns("api/zako/v1/register");
+                .addPathPatterns("api/zako/v1/register")
+                .addPathPatterns("/api/yggdrasil/textures/**")
+                .addPathPatterns("/api/zako/v1/userdata");
         registry.addInterceptor(authenticateCheck)
                 .addPathPatterns("/api/zako/v1/userdata")
                 .addPathPatterns("/api/zako/v1/userinfo")
@@ -40,17 +42,9 @@ public class WebConfig implements WebMvcConfigurer {
                 .addPathPatterns("/api/zako/v1/user/violation/history")
                 .addPathPatterns("/api/v3/zako/administration/validate")
                 .addPathPatterns("/api/zako/v1/user/2fa/open2fa")
-                .addPathPatterns("/api/zako/v1/user/2fa/close2fa");
+                .addPathPatterns("/api/zako/v1/user/2fa/close2fa")
+                .addPathPatterns("/api/yggdrasil/textures/**");
     }
-//    @Override
-//    public void addCorsMappings(CorsRegistry registry) {
-//        registry.addMapping("/**")  // 可限制哪个请求可以通过跨域
-//                .allowedHeaders("*")  // 可限制固定请求头可以通过跨域
-//                .allowedMethods("*")
-//                .allowedOriginPatterns(allowedOriginPatterns)
-//                .allowedHeaders("*")
-//                .allowCredentials(true) // 是否允许发送cookie
-//                .exposedHeaders(HttpHeaders.SET_COOKIE).exposedHeaders("*");
-//    }
+
 }
 

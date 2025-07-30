@@ -81,13 +81,7 @@ public class OtherUtils {
         try{
             // 构造Image对象
             BufferedImage src = ImageIO.read(srcImagePath);
-            int width = src.getWidth();
-            int height = src.getHeight();
-            // 缩小边长
-            BufferedImage tag = new BufferedImage(width / widthRatio, height / heightRatio, BufferedImage.TYPE_INT_RGB);
-            // 绘制 缩小  后的图片
-            tag.getGraphics().drawImage(src, 0, 0, width / widthRatio, height / heightRatio, null);
-             ImageIO.write(tag, "png", new File(toImagePath+uid +".png"));
+             ImageIO.write(src, "png", new File(toImagePath+uid +".png"));
         }catch(Exception e){
             Logger.getLogger(Logger.GLOBAL_LOGGER_NAME).warning(e.toString());
         }finally{
