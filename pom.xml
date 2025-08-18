@@ -5,14 +5,14 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.5.0</version>
+        <version>3.5.4</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
-    <groupId>moe.takanashihoshino</groupId>
-    <artifactId>NyanID-userserver</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
-    <name>NyanID-userserver</name>
-    <description>NyanID-userserver</description>
+    <groupId>moe.koseirin.nyanruaineo</groupId>
+    <artifactId>NyanID</artifactId>
+    <version>A0.14-B58-C96</version>
+    <name>NyanID</name>
+    <description>NyanID</description>
     <url/>
     <licenses>
         <license/>
@@ -42,7 +42,12 @@
         <dependency>
             <groupId>com.squareup.okhttp3</groupId>
             <artifactId>okhttp</artifactId>
-            <version>4.9.1</version>
+            <version>4.9.2</version>
+        </dependency>
+        <dependency>
+            <groupId>com.github.houbb</groupId>
+            <artifactId>sensitive-word</artifactId>
+            <version>0.27.1</version>
         </dependency>
         <dependency>
             <groupId>org.quartz-scheduler</groupId>
@@ -64,14 +69,24 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
+            <exclusions>
+                <!--排除tomcat依赖-->
+                <exclusion>
+                    <artifactId>spring-boot-starter-tomcat</artifactId>
+                    <groupId>org.springframework.boot</groupId>
+                </exclusion>
+            </exclusions>
         </dependency>
+
+        <!--undertow容器-->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-undertow</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-websocket</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-tomcat</artifactId>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -97,11 +112,6 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot</artifactId>
-            <version>3.5.0</version>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
     </dependencies>
 
@@ -171,7 +181,7 @@
                         <manifest>
                             <addClasspath>true</addClasspath>
                             <classpathPrefix>lib/</classpathPrefix>
-                            <mainClass>moe.takanashihoshino.nyaniduserserver.NyanIdUserserverApplication</mainClass>
+                            <mainClass>moe.koseirin.nyanruaineo.NyanIdApplication</mainClass>
                         </manifest>
                     </archive>
                 </configuration>
