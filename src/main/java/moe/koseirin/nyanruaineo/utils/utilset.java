@@ -5,10 +5,7 @@ package moe.koseirin.nyanruaineo.utils;
  * awa
  */
 
-/*
- * @author KoseiRin_
- * awa
- */
+
 
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;

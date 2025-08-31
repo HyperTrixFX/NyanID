@@ -41,7 +41,7 @@ public class UserDevices {
     @Column(columnDefinition="varchar(12)",nullable = false)
     private String Ip;
 
-    @Column(columnDefinition="varchar(32)",nullable = false)
+    @Column(columnDefinition="varchar(150)",nullable = false)
     private String Session;
 
     @Column(nullable = false)

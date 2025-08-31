@@ -26,8 +26,8 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
-@RestController
-@RequestMapping("api/zako/v1/login")
+//@RestController
+//@RequestMapping("api/zako/v1/login")
 public class LoginApi {
 
     private final RedisService redisService;
@@ -59,121 +59,122 @@ public class LoginApi {
         this.userDevicesRepository = userDevicesRepository;
         this.banUserRepository = banUserRepository;
     }
-
-    @PostMapping
-    public <T> Object PostMethod(@RequestBody(required = false) T data, HttpServletResponse response, HttpServletRequest request) throws Exception {
-        if (data != null){
-            JSONObject a = JSONObject.parseObject(JSONObject.toJSONString(data));
-            String email = a.getString("email");
-            String password = a.getString("pwd");
-            String DevicesID = a.getString("devid");
-            Boolean LoginForWeb = Boolean.valueOf(request.getHeader("LoginForWeb"));
-            String DevicesName = a.getString("devname");
-            String IP = request.getRemoteAddr();
-            if (email != null && password != null){
-                JSONObject BanEvent = new JSONObject();
-                BanEvent.put(EventID, email);
-                    if (!email.matches("[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,6}")) {
-                        return ErrRes.IllegalRequestException("The mailbox is malformed 杂鱼喵~", response);
-                    } else {
-                        if (accountsRepository.findByEmail(email) != null) {
-                            if (redisService.getValue(String.valueOf(BanEvent)) != null && redisService.getValue(String.valueOf(BanEvent)).equals(IP)) {
-                                return ErrRes.NotFoundAccountException("The account doesn't exist or is locked because of a password error 杂鱼喵~", response);
-                            } else {
-                                if (constMap.get(email) == null) {
-                                    constMap.put(email, new Const(1));
-                                } else if (constMap.get(email).requestCount > 3) {
-                                    constMap.remove(email);
-                                    redisService.setValueWithExpiration(String.valueOf(BanEvent), IP, 180, TimeUnit.SECONDS);
-                                }
-                                if (LoginForWeb){
-                                    String DevicesIDT = utilset.RandomString(16);
-                                    String DevicesNameT = "Web";
-                                    DevicesName  = DevicesNameT;
-                                    DevicesID = DevicesIDT;
-                                }else {
-                                    if(DevicesID==null || DevicesName==null) {
-                                        return ErrRes.IllegalRequestException("The device ID or device name is missing 杂鱼喵~", response);
-                                    }
-                                }
-                                    String pwd = accountsRepository.LoginByEmail(email);
-                                    String lockpwd = utilset.HMACSHA256(encryptionKey,password);
-                                    if (Objects.equals(lockpwd, pwd)) {
-                                        String uid = accountsRepository.findByEmail(email);
-                                        String session = request.getSession().getId();
-                                        String  UserSession = userDevicesRepository.findSessionBySession(session);
-                                        if (banUserRepository.findBanIDByUid(uid) == null) {
-                                            Accounts accounts = accountsRepository.GetUser(uid);
-                                            if (accounts.getSecretKey() == null) {
-                                                if (Objects.equals(UserSession, session) && utilset.isDaysBefore(userDevicesRepository.findTimeBySession(session), 14)) {
-                                                    String token = userDevicesRepository.findTokenBySession(session);
-                                                    String clientid = userDevicesRepository.findClientIdByToken(token);
-                                                    LoginJson loginJson = new LoginJson();
-                                                    loginJson.setData(clientid);
-                                                    loginJson.setStatus("success");
-                                                    loginJson.setTimestamp(LocalDateTime.now());
-                                                    loginJson.setToken(token);
-                                                    loginJson.setData(Base64.getEncoder().encodeToString(token.getBytes()));
-                                                    userDevicesRepository.UpdateCreateTime(LocalDateTime.now(), token);
-                                                    return loginJson;
-                                                } else {
-                                                    userDevicesRepository.deleteBySession(UserSession);
-                                                    String clientid = utilset.RandomString(32);
-                                                    String token = utilset.RandomString(64);
-                                                    UserDevices userDevices = new UserDevices();
-                                                    userDevices.setUid(uid);
-                                                    userDevices.setDeviceID(DevicesID);
-                                                    userDevices.setDeviceName(DevicesName);
-                                                    userDevices.setToken(token);
-                                                    userDevices.setIp(IP);
-                                                    userDevices.setIsActive(true);
-                                                    userDevices.setSession(session);
-                                                    userDevices.setClientId(clientid);
-                                                    userDevices.setCreateTime(LocalDateTime.now());
-                                                    userDevicesService.save(userDevices);
-                                                    if (constMap.get(email) != null) {
-                                                        constMap.remove(email);
-                                                    }
-                                                    LoginJson loginJson = new LoginJson();
-                                                    loginJson.setData(clientid);
-                                                    loginJson.setStatus("success");
-                                                    loginJson.setTimestamp(LocalDateTime.now());
-                                                    loginJson.setToken(token);
-                                                    loginJson.setData(Base64.getEncoder().encodeToString(token.getBytes()));
-                                                    return loginJson;
-                                                }
-                                            } else {
-                                                //2fa
-                                                String clientid = utilset.RandomString(32);
-                                                JSONObject jsonObject = new JSONObject();
-                                                jsonObject.put("have2fa",true);
-                                                jsonObject.put("Token", utilset.encrypt(clientid,publicKey));
-                                                JSONObject object = new JSONObject();
-                                                object.put("uid",accounts.getUid());
-                                                object.put("skey",accounts.getSecretKey());
-                                                redisService.setValueWithExpiration(clientid,JSONObject.toJSONString(object),30,TimeUnit.MINUTES);
-                                                return jsonObject;
-                                            }
-                                        }else {
-                                            return ErrRes.NotFoundAccountException("This account has been banned for violating our User Agreement, please create a ticket to appeal ，Your BanID: " + banUserRepository.findBanIDByUid(uid) + "  杂鱼喵~ ", response);
-                                        }
-                                } else {
-                                    if (constMap.get(email) != null) {
-                                        constMap.get(email).requestCount++;
-                                    }
-                                    return ErrRes.NotFoundAccountException("The account doesn't exist or is locked because of a password error 杂鱼喵~", response);
-                                }
-                            }
-                        } else {
-                            return ErrRes.NotFoundAccountException("The account doesn't exist or is locked because of a password error 杂鱼喵~", response);
-                        }
-                    }
-            }else {
-                return ErrRes.IllegalRequestException("The parameter is incorrect 杂鱼喵~",response);
-            }
-
-        }else return ErrRes.IllegalRequestException("The parameter is incorrect 杂鱼喵~",response);
-    }
+//
+//    @PostMapping
+//    public <T> Object PostMethod(@RequestBody(required = false) T data, HttpServletResponse response, HttpServletRequest request) throws Exception {
+//        if (data != null){
+//            JSONObject a = JSONObject.parseObject(JSONObject.toJSONString(data));
+//            String email = a.getString("email");
+//            String password = a.getString("pwd");
+//            String DevicesID = a.getString("devid");
+//            Boolean LoginForWeb = Boolean.valueOf(request.getHeader("LoginForWeb"));
+//            String DevicesName = a.getString("devname");
+//            String IP = request.getRemoteAddr();
+//            if (email != null && password != null){
+//                JSONObject BanEvent = new JSONObject();
+//                BanEvent.put(EventID, email);
+//                    if (!email.matches("[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,6}")) {
+//                        return ErrRes.IllegalRequestException("The mailbox is malformed 杂鱼喵~", response);
+//                    } else {
+//                        if (accountsRepository.findByEmail(email) != null) {
+//                            if (redisService.getValue(String.valueOf(BanEvent)) != null && redisService.getValue(String.valueOf(BanEvent)).equals(IP)) {
+//                                return ErrRes.NotFoundAccountException("The account doesn't exist or is locked because of a password error 杂鱼喵~", response);
+//                            } else {
+//                                if (constMap.get(email) == null) {
+//                                    constMap.put(email, new Const(1));
+//                                } else if (constMap.get(email).requestCount > 3) {
+//                                    constMap.remove(email);
+//                                    redisService.setValueWithExpiration(String.valueOf(BanEvent), IP, 180, TimeUnit.SECONDS);
+//                                }
+//                                if (LoginForWeb){
+//                                    String DevicesIDT = utilset.RandomString(16);
+//                                    String DevicesNameT = "Web";
+//                                    DevicesName  = DevicesNameT;
+//                                    DevicesID = DevicesIDT;
+//                                }else {
+//                                    if(DevicesID==null || DevicesName==null) {
+//                                        return ErrRes.IllegalRequestException("The device ID or device name is missing 杂鱼喵~", response);
+//                                    }
+//                                }
+//                                    String pwd = accountsRepository.LoginByEmail(email);
+//                                    String lockpwd = utilset.HMACSHA256(encryptionKey,password);
+//                                    if (Objects.equals(lockpwd, pwd)) {
+//                                        String uid = accountsRepository.findByEmail(email);
+//                                        String session = request.getSession().getId();
+//                                        String UserSession = userDevicesRepository.findSessionBySession(session);
+//                                        if (banUserRepository.findBanIDByUid(uid) == null) {
+//                                            Accounts accounts = accountsRepository.GetUser(uid);
+//                                            if (accounts.getSecretKey() == null) {
+//                                                if (Objects.equals(UserSession, session) && utilset.isDaysBefore(userDevicesRepository.findTimeBySession(session), 14)) {
+//                                                    String token = userDevicesRepository.findTokenBySession(session);
+//                                                    String clientid = userDevicesRepository.findClientIdByToken(token);
+//                                                    LoginJson loginJson = new LoginJson();
+//                                                    loginJson.setData(clientid);
+//                                                    loginJson.setStatus("success");
+//                                                    loginJson.setTimestamp(LocalDateTime.now());
+//                                                    loginJson.setToken(token);
+//                                                    loginJson.setData(Base64.getEncoder().encodeToString(token.getBytes()));
+//                                                    userDevicesRepository.UpdateCreateTime(LocalDateTime.now(), token);
+//                                                    return loginJson;
+//                                                } else {
+//                                                    userDevicesRepository.deleteBySession(UserSession);
+//                                                    String clientid = utilset.RandomString(32);
+//                                                    String token = utilset.RandomString(64);
+//                                                    UserDevices userDevices = new UserDevices();
+//                                                    userDevices.setUid(uid);
+//                                                    userDevices.setDeviceID(DevicesID);
+//                                                    userDevices.setDeviceName(DevicesName);
+//                                                    userDevices.setToken(token);
+//                                                    userDevices.setIp(IP);
+//                                                    userDevices.setIsActive(true);
+//                                                    userDevices.setSession(session);
+//                                                    userDevices.setClientId(clientid);
+//                                                    userDevices.setHardwareID(request.getRequestId());
+//                                                    userDevices.setCreateTime(LocalDateTime.now());
+//                                                    userDevicesService.save(userDevices);
+//                                                    if (constMap.get(email) != null) {
+//                                                        constMap.remove(email);
+//                                                    }
+//                                                    LoginJson loginJson = new LoginJson();
+//                                                    loginJson.setData(clientid);
+//                                                    loginJson.setStatus("success");
+//                                                    loginJson.setTimestamp(LocalDateTime.now());
+//                                                    loginJson.setToken(token);
+//                                                    loginJson.setData(Base64.getEncoder().encodeToString(token.getBytes()));
+//                                                    return loginJson;
+//                                                }
+//                                            } else {
+//                                                //2fa
+//                                                String clientid = utilset.RandomString(32);
+//                                                JSONObject jsonObject = new JSONObject();
+//                                                jsonObject.put("have2fa",true);
+//                                                jsonObject.put("Token", utilset.encrypt(clientid,publicKey));
+//                                                JSONObject object = new JSONObject();
+//                                                object.put("uid",accounts.getUid());
+//                                                object.put("skey",accounts.getSecretKey());
+//                                                redisService.setValueWithExpiration(clientid,JSONObject.toJSONString(object),30,TimeUnit.MINUTES);
+//                                                return jsonObject;
+//                                            }
+//                                        }else {
+//                                            return ErrRes.NotFoundAccountException("This account has been banned for violating our User Agreement, please create a ticket to appeal ，Your BanID: " + banUserRepository.findBanIDByUid(uid) + "  杂鱼喵~ ", response);
+//                                        }
+//                                } else {
+//                                    if (constMap.get(email) != null) {
+//                                        constMap.get(email).requestCount++;
+//                                    }
+//                                    return ErrRes.NotFoundAccountException("The account doesn't exist or is locked because of a password error 杂鱼喵~", response);
+//                                }
+//                            }
+//                        } else {
+//                            return ErrRes.NotFoundAccountException("The account doesn't exist or is locked because of a password error 杂鱼喵~", response);
+//                        }
+//                    }
+//            }else {
+//                return ErrRes.IllegalRequestException("The parameter is incorrect 杂鱼喵~",response);
+//            }
+//
+//        }else return ErrRes.IllegalRequestException("The parameter is incorrect 杂鱼喵~",response);
+//    }
 
 
 

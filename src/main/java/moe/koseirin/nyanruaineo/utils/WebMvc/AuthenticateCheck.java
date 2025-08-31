@@ -8,10 +8,15 @@ package moe.koseirin.nyanruaineo.utils.WebMvc;
 import com.alibaba.fastjson2.JSONObject;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import moe.koseirin.nyanruaineo.entity.Accounts;
+import moe.koseirin.nyanruaineo.entity.NyanIDuser;
 import moe.koseirin.nyanruaineo.utils.ErrUtils.Error;
 import moe.koseirin.nyanruaineo.utils.ErrUtils.ErrorCode;
 import moe.koseirin.nyanruaineo.repository.BanUserRepository;
 import moe.koseirin.nyanruaineo.repository.UserDevicesRepository;
+import moe.koseirin.nyanruaineo.utils.utilset;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.HandlerInterceptor;
@@ -24,7 +29,8 @@ import java.util.Objects;
 @RestController
 @Component
 public class AuthenticateCheck implements HandlerInterceptor {
-
+    @Value("${yggdrasil.privateKey}")
+    private String  privateKey;
 
     private final BanUserRepository banUserRepository;
 
@@ -43,10 +49,11 @@ public class AuthenticateCheck implements HandlerInterceptor {
         String getEvent = request.getHeader("Event");
         String RequestMode = request.getMethod();
         if (Authorization != null && getEvent != null){
-            String Token = Authorization.replace("Bearer ", "").replace(" ", "");
+            String raw = Authorization.replace("Bearer ", "").replace(" ", "");
+            String Token = utilset.decrypt(raw,privateKey);
             if (userDevicesRepository.findUidByToken(Token) != null){
                 String uid = userDevicesRepository.findUidByToken(Token);
-                if (banUserRepository.findBanIDByUid(uid) == null) {
+                if (banUserRepository.LEVE450TRUE(uid) == null) {
                     switch (getEvent) {
                         case "Ua"://上传 PUT
                             if (Objects.equals(RequestMode, "PUT")) {
@@ -104,7 +111,7 @@ public class AuthenticateCheck implements HandlerInterceptor {
         }
     }
 
-    public void PrintWriter(HttpServletResponse response,Error error,int code) throws IOException {
+    public void PrintWriter(HttpServletResponse response, Error error, int code) throws IOException {
         PrintWriter out = response.getWriter();
         response.setContentType("application/json");
         response.setStatus(code);

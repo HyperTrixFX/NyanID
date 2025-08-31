@@ -13,6 +13,7 @@ import moe.koseirin.nyanruaineo.entity.Accounts;
 import moe.koseirin.nyanruaineo.entity.NyanIDuser;
 import moe.koseirin.nyanruaineo.repository.*;
 import moe.koseirin.nyanruaineo.entity.UserPermissions;
+import moe.koseirin.nyanruaineo.utils.utilset;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -37,6 +38,9 @@ public class UserInfoApi {
     @Value("${yggdrasil.APILocation}")
     private String APILocation;
 
+    @Value("${yggdrasil.privateKey}")
+    private String  privateKey;
+
     public UserInfoApi(NyanIDuserRepository nyanIDuserRepository, AccountsRepository accountsRepository, UserDevicesRepository userDevicesRepository, YggdrasilRepository yggdrasilRepository, UserPermissionsRepository userPermissionsRepository) {
         this.nyanIDuserRepository = nyanIDuserRepository;
         this.accountsRepository = accountsRepository;
@@ -49,7 +53,8 @@ public class UserInfoApi {
     @GetMapping(produces = "application/json")
     public Object GETMethod(HttpServletResponse response, HttpServletRequest request) {
             String Authorization = request.getHeader("Authorization");
-            String Token = Authorization.replace("Bearer ", "").replace(" ", "");
+            String raw = Authorization.replace("Bearer ", "").replace(" ", "");
+            String Token = utilset.decrypt(raw,privateKey);
             String uid = userDevicesRepository.findUidByToken(Token);
             Accounts accounts = accountsRepository.GetUser(uid);
             NyanIDuser user = nyanIDuserRepository.getUser(uid);

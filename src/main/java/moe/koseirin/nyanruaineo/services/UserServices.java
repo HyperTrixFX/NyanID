@@ -5,15 +5,21 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import moe.koseirin.nyanruaineo.NyanIdApplication;
 import moe.koseirin.nyanruaineo.entity.Accounts;
+import moe.koseirin.nyanruaineo.entity.BanUserList;
 import moe.koseirin.nyanruaineo.entity.NyanIDuser;
+import moe.koseirin.nyanruaineo.entity.UserDevices;
 import moe.koseirin.nyanruaineo.repository.AccountsRepository;
+import moe.koseirin.nyanruaineo.repository.BanUserRepository;
+import moe.koseirin.nyanruaineo.repository.UserDevicesRepository;
+import moe.koseirin.nyanruaineo.server.web.User.UserJson.LoginJson;
 import moe.koseirin.nyanruaineo.utils.EmailHelper.EmailService;
 import moe.koseirin.nyanruaineo.utils.EnumList.EmailBody;
 import moe.koseirin.nyanruaineo.utils.EnumList.UUIDtype;
-import moe.koseirin.nyanruaineo.utils.ErrUtils.SJson;
 import moe.koseirin.nyanruaineo.utils.RedisUtils.RedisService;
 import moe.koseirin.nyanruaineo.utils.SqlUtils.Service.NyanidUserService;
+import moe.koseirin.nyanruaineo.utils.SqlUtils.Service.UserDevicesService;
 import moe.koseirin.nyanruaineo.utils.SqlUtils.Service.UserService;
+import moe.koseirin.nyanruaineo.utils.WebMvc.AuthenticateCheck;
 import moe.koseirin.nyanruaineo.utils.WebMvc.IPSecurityDetection;
 import moe.koseirin.nyanruaineo.utils.WebMvc.TurnstileResponse;
 import moe.koseirin.nyanruaineo.utils.WebMvc.TurnstileService;
@@ -27,6 +33,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.Base64;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 import static moe.koseirin.nyanruaineo.utils.Respond.respond;
@@ -50,6 +59,12 @@ public class UserServices {
 
     private final NyanidUserService nyanidUserService;
 
+    private final BanUserRepository banUserRepository;
+
+    private final UserDevicesRepository userDevicesRepository;
+
+    private final UserDevicesService userDevicesService;
+
     @Value("${NyanidSetting.encryptionKey}")
     private String encryptionKey;
 
@@ -59,16 +74,29 @@ public class UserServices {
     @Value("${NyanidSetting.HOST}")
     private String HOST;
 
+    @Value("${yggdrasil.publicKey}")
+    private String  publicKey;
+
+    @Value("${yggdrasil.privateKey}")
+    private String  privateKey;
+
     @Value("${NyanidSetting.EnableUserRegister}")
     private boolean EnableUserRegister;
     public String EventID = "RegEvent1";
+    public  String EventID2 = "LoEvent1";
 
-    public UserServices(AccountsRepository accountsRepository, EmailService emailService, RedisService redisService, UserService userService, NyanidUserService nyanidUserService) {
+    private final Map<String, UserServices.Const> constMap = new HashMap<>();
+
+
+    public UserServices(AccountsRepository accountsRepository, EmailService emailService, RedisService redisService, UserService userService, NyanidUserService nyanidUserService, BanUserRepository banUserRepository, UserDevicesRepository userDevicesRepository, UserDevicesService userDevicesService) {
         this.accountsRepository = accountsRepository;
         this.emailService = emailService;
         this.redisService = redisService;
         this.userService = userService;
         this.nyanidUserService = nyanidUserService;
+        this.banUserRepository = banUserRepository;
+        this.userDevicesRepository = userDevicesRepository;
+        this.userDevicesService = userDevicesService;
     }
 
 
@@ -169,10 +197,83 @@ public class UserServices {
 
 
     @Transactional
-    public ResponseEntity<?> login(String username, String password, String email, HttpServletRequest request) {
-
-
-        return null;
+    public ResponseEntity<?> login(String email, String password,String idempotencyKey, HttpServletRequest request) {
+        if (email == null || email.isEmpty() || password == null || password.isEmpty() || idempotencyKey == null || idempotencyKey.isEmpty()) {
+            return respond(MediaType.APPLICATION_JSON,403, "message","非法参数喵!","timestamp", LocalDateTime.now());
+        }
+        if(!email.matches("[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,6}") ){
+            return respond(MediaType.APPLICATION_JSON,403, "message","邮箱格式错误喵!","timestamp", LocalDateTime.now());
+        }
+        TurnstileResponse turnstileResponse = TurnstileService.validateToken(idempotencyKey,TurnstileSecretKey,IPSecurityDetection.getIpAddress(request));
+        if (!turnstileResponse.isSuccess() && turnstileResponse.getAction() != "LoginEvent"){
+            return respond(MediaType.APPLICATION_JSON,401, "message","请先通过Cloudflare Turnstile安全验证喵!","timestamp", LocalDateTime.now());
+        }else {
+            JSONObject BanEvent = new JSONObject();
+            BanEvent.put(EventID2, email);
+            if (redisService.getValue(String.valueOf(BanEvent)) != null && redisService.getValue(String.valueOf(BanEvent)).equals(IPSecurityDetection.getIpAddress(request))) {
+                return respond(MediaType.APPLICATION_JSON,401, "message","The account doesn't exist or is locked because of a password error 杂鱼喵!","timestamp", LocalDateTime.now());
+            } else {
+                if (constMap.get(email) == null) {
+                    constMap.put(email, new UserServices.Const(1));
+                }else if (constMap.get(email).requestCount > 3) {
+                    constMap.remove(email);
+                    redisService.setValueWithExpiration(String.valueOf(BanEvent), IPSecurityDetection.getIpAddress(request), 180, TimeUnit.SECONDS);
+                }
+            }
+            Accounts accounts = accountsRepository.GetUser(email);
+            if (accounts == null){
+                return respond(MediaType.APPLICATION_JSON,401, "message","The account doesn't exist or is locked because of a password error 杂鱼喵!","timestamp", LocalDateTime.now());
+            }
+            String pwd = utilset.HMACSHA256(encryptionKey,password);
+            if (!pwd.equals(accounts.getPassword())){
+                if (constMap.get(email) != null) {
+                    constMap.get(email).requestCount++;
+                }
+                return respond(MediaType.APPLICATION_JSON,401, "message","The account doesn't exist or is locked because of a password error 杂鱼喵!","timestamp", LocalDateTime.now());
+            }
+            BanUserList banUserList = banUserRepository.LEVE450TRUE(accounts.getUid());
+            if (banUserList != null){
+                constMap.remove(email);
+                return respond(MediaType.APPLICATION_JSON,401, "message","异常等级LEVEL"+banUserList.getType()+",异常原因"+banUserList.getReason()+",处罚ID"+banUserList.getBanID()+"账户状态异常杂鱼喵!","timestamp", LocalDateTime.now());
+            }
+            if (accounts.getSecretKey() != null){
+                constMap.remove(email);
+                String eid = utilset.RandomString(32);
+                JSONObject object = new JSONObject();
+                object.put("uid",accounts.getUid());
+                object.put("skey",accounts.getSecretKey());
+                redisService.setValueWithExpiration(eid,JSONObject.toJSONString(object),10,TimeUnit.MINUTES);
+                return respond(MediaType.APPLICATION_JSON,200, "have2fa",true,"Token", utilset.encrypt(eid,publicKey));
+            }else {
+                String session = request.getSession().getId();
+                String UserSession = userDevicesRepository.findSessionBySession(session);
+                if (Objects.equals(UserSession, session) && utilset.isDaysBefore(userDevicesRepository.findTimeBySession(session), 14)) {
+                    String token = userDevicesRepository.findTokenBySession(session);
+                    userDevicesRepository.UpdateCreateTime(LocalDateTime.now(), token);
+                    return respond(MediaType.APPLICATION_JSON,200, "have2fa",false,"access_token", utilset.encrypt(token,publicKey),"timestamp", LocalDateTime.now());
+                } else {
+                    userDevicesRepository.deleteBySession(UserSession);
+                    String clientid = utilset.RandomString(32);
+                    String token = utilset.RandomString(64);
+                    UserDevices userDevices = new UserDevices();
+                    userDevices.setUid(accounts.getUid());
+                    userDevices.setDeviceID("null");
+                    userDevices.setDeviceName("WEB");
+                    userDevices.setToken(token);
+                    userDevices.setIp(IPSecurityDetection.getIpAddress(request));
+                    userDevices.setIsActive(true);
+                    userDevices.setSession(session);
+                    userDevices.setClientId(clientid);
+                    userDevices.setHardwareID(null);
+                    userDevices.setCreateTime(LocalDateTime.now());
+                    userDevicesService.save(userDevices);
+                    if (constMap.get(email) != null) {
+                        constMap.remove(email);
+                    }
+                    return respond(MediaType.APPLICATION_JSON,200, "have2fa",false,"access_token", utilset.encrypt(token,publicKey),"timestamp", LocalDateTime.now());
+                }
+            }
+        }
     }
 
     @Transactional
@@ -182,4 +283,11 @@ public class UserServices {
         return null;
     }
 
+
+    private static class Const {
+        int requestCount;
+        Const(int requestCount) {
+            this.requestCount = requestCount;
+        }
+    }
 }
