@@ -46,8 +46,13 @@ public class UserAuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> Login(@RequestBody LoginDTO loginDTO,HttpServletRequest request){
+    public ResponseEntity<?> Login(@RequestBody LoginDTO loginDTO,HttpServletRequest request) throws Exception {
         return userServices.login(loginDTO.getEmail(), loginDTO.getPassword(), loginDTO.getIdempotencyKey(), request);
+    }
+
+    @PostMapping("/2fa")
+    public ResponseEntity<?> loginAt2FA(@RequestBody LoginDTO loginDTO,HttpServletRequest request){
+        return userServices.l2fa(request, loginDTO.getVerifyCode(), loginDTO.getToken());
     }
 
 

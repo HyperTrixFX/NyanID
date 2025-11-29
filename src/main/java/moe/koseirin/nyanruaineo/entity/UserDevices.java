@@ -32,7 +32,7 @@ public class UserDevices {
     @Column(columnDefinition="varchar(10)",nullable = false)
     private String DeviceName;
 
-    @Column(columnDefinition="varchar(32)",nullable = false)
+    @Column(columnDefinition="varchar(128)")
     private String DeviceID;
 
     @Column(columnDefinition="varchar(64)",nullable = false)

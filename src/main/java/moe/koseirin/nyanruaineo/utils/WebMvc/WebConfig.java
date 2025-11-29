@@ -33,10 +33,7 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addInterceptor(ipSecurityDetection)
                 .addPathPatterns("/api/yggdrasil/authserver/**")
                 .addPathPatterns("/api/zako/v1/login")
-                .addPathPatterns("/api/zako/v1/login/2fa")
-                .addPathPatterns("/api/zako/v1/**")
-                .addPathPatterns("/api/yggdrasil/textures/**")
-                .addPathPatterns("/api/zako/v1/userdata");
+                .addPathPatterns("/api/zako/v1/login/2fa");
         registry.addInterceptor(authenticateCheck)
                 .addPathPatterns("/api/zako/v1/userdata")
                 .addPathPatterns("/api/zako/v1/userinfo")

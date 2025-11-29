@@ -9,6 +9,7 @@ package moe.koseirin.nyanruaineo.server.web.User;
 import com.alibaba.fastjson2.JSONObject;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import moe.koseirin.nyanruaineo.NyanIdApplication;
 import moe.koseirin.nyanruaineo.utils.EmailHelper.EmailService;
 import moe.koseirin.nyanruaineo.utils.ErrUtils.ErrRes;
 import moe.koseirin.nyanruaineo.utils.ErrUtils.Error;
@@ -23,6 +24,7 @@ import moe.koseirin.nyanruaineo.repository.UserDevicesRepository;
 import moe.koseirin.nyanruaineo.repository.YggdrasilRepository;
 import moe.koseirin.nyanruaineo.utils.utilset;
 import moe.koseirin.nyanruaineo.websocket.server.BungeeConnectHandle;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -48,19 +50,25 @@ public class UserDataApi {
 
     private final RedisService redisService;
 
-    public UserDataApi(NyanIDuserRepository nyanIDuserRepository, UserDevicesRepository userDevicesRepository, YggdrasilRepository yggdrasilRepository, AccountsRepository accountsRepository, EmailService emailService, RedisService redisService) {
+    private final utilset utilset;
+    @Value("${yggdrasil.privateKey}")
+    private String  privateKey;
+
+    public UserDataApi(NyanIDuserRepository nyanIDuserRepository, UserDevicesRepository userDevicesRepository, YggdrasilRepository yggdrasilRepository, AccountsRepository accountsRepository, EmailService emailService, RedisService redisService, utilset utilset) {
         this.nyanIDuserRepository = nyanIDuserRepository;
         this.userDevicesRepository = userDevicesRepository;
         this.yggdrasilRepository = yggdrasilRepository;
         this.accountsRepository = accountsRepository;
         this.emailService = emailService;
         this.redisService = redisService;
+        this.utilset = utilset;
     }
 
     @PostMapping(produces = "application/json")
     public <T> Object PostMethod(@RequestBody(required = false) T data, HttpServletResponse response, HttpServletRequest request){
         String Authorization = request.getHeader("Authorization");
-        String Token = Authorization.replace("Bearer ", "").replace(" ", "");
+        String rawToken = Authorization.replace("Bearer ", "").replace(" ", "");
+        String Token = utilset.decrypt(rawToken, privateKey);
         String uid = userDevicesRepository.findUidByToken(Token);
         NyanIDuser user = nyanIDuserRepository.getUser(uid);
         Accounts accounts = accountsRepository.GetUser(uid);
@@ -71,6 +79,10 @@ public class UserDataApi {
                         case 0 :{//设置昵称
                             String NICKNAME = a.getString("nickname");
                             if (NICKNAME != null && NICKNAME.length() > 2){
+                                if (NyanIdApplication.wordBs.contains(NICKNAME)) {
+                                    response.setStatus(401);
+                                    return success("昵称含有非法内容,此请求已被服务器主动放弃喵~",401);
+                                }
                                 if (!Objects.equals(user.getNickname(), NICKNAME)){
                                     nyanIDuserRepository.UpdateNickname(NICKNAME,uid);
                                     response.setStatus(200);
@@ -81,6 +93,10 @@ public class UserDataApi {
                         case 1 :{//更改用户名
                             String username = a.getString("username");
                             if (username != null && username.length() > 3 && username.matches("(?=.*[a-zA-Z])[a-zA-Z0-9_]{3,20}")) {
+                                if (NyanIdApplication.wordBs.contains(username)) {
+                                    response.setStatus(401);
+                                    return success("用户名含有非法内容,此请求已被服务器主动放弃喵~",401);
+                                }
                                 Accounts accounts1 = accountsRepository.GetUser(username);
                                 if (accounts != null && accounts1 == null){
                                     if (yggdrasilRepository.GetPlayerNAME(uid) != null){
@@ -95,6 +111,10 @@ public class UserDataApi {
                         }
                         case 2 :{//更改简介
                             String description = a.getString("description");
+                            if (NyanIdApplication.wordBs.contains(description)) {
+                                response.setStatus(401);
+                                return success("简介含有非法内容,此请求已被服务器主动放弃喵~",401);
+                            }
                             if (description != null && description.length() > 2 && description.length() < 100){
                                 nyanIDuserRepository.SetDescriptionByUid(description,uid);
                                 return success("Setting description success MiaoWu~",200);
@@ -154,7 +174,8 @@ public class UserDataApi {
                 String ContentType = avatarFile.getContentType();
                 if (ContentType.matches("image/.*") && avatarFile.getSize() < 1024 * 1024 * 10) {
                     String Authorization = request.getHeader("Authorization");
-                    String Token = Authorization.replace("Bearer ", "").replace(" ", "");
+                    String rawToken = Authorization.replace("Bearer ", "").replace(" ", "");
+                    String Token = utilset.decrypt(rawToken, privateKey);
                     String uid = userDevicesRepository.findUidByToken(Token);
                     SaveUserAvatar(uid, avatarFile);
                     SJson sJson = new SJson();

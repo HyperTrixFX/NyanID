@@ -13,6 +13,8 @@ import moe.koseirin.nyanruaineo.repository.YggdrasilPlayerRepository;
 import moe.koseirin.nyanruaineo.repository.YggdrasilRepository;
 import moe.koseirin.nyanruaineo.utils.SqlUtils.Service.TexturesListService;
 import moe.koseirin.nyanruaineo.entity.TexturesList;
+import moe.koseirin.nyanruaineo.utils.utilset;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -29,16 +31,21 @@ import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.zip.CRC32;
 
 @RestController
 @RequestMapping("api/yggdrasil/textures")
 public class Textures {
+    @Value("${yggdrasil.privateKey}")
+    private String  privateKey;
+    @Value("${yggdrasil.publicKey}")
+    private String  publicKey;
     private final YggdrasilPlayerRepository yggdrasilPlayerRepository;
     private final YggdrasilRepository yggdrasilRepository;
     private final UserDevicesRepository userDevicesRepository;
-
+    private final utilset utilset;
     private final TexturesListService texturesListService;
 
     private static final byte[] PNG_HEADER = {
@@ -54,17 +61,19 @@ public class Textures {
             (byte) 0x06
     };
 
-    public Textures(YggdrasilPlayerRepository yggdrasilPlayerRepository, YggdrasilRepository yggdrasilRepository, UserDevicesRepository userDevicesRepository, TexturesListService texturesListService) {
+    public Textures(YggdrasilPlayerRepository yggdrasilPlayerRepository, YggdrasilRepository yggdrasilRepository, UserDevicesRepository userDevicesRepository, utilset utilset, TexturesListService texturesListService) {
         this.yggdrasilPlayerRepository = yggdrasilPlayerRepository;
         this.yggdrasilRepository = yggdrasilRepository;
         this.userDevicesRepository = userDevicesRepository;
+        this.utilset = utilset;
         this.texturesListService = texturesListService;
     }
 
     @PutMapping("skin")
     public <T> CompletableFuture<Object> PutSkin(@RequestParam(value = "skin", required = false) T skin, @RequestParam(value = "model", required = false) T model, HttpServletResponse response, HttpServletRequest request) throws Exception {
         String Authorization = request.getHeader("Authorization");
-        String Token = Authorization.replace("Bearer ", "").replace(" ", "");
+        String raw = Authorization.replace("Bearer ", "").replace(" ", "");
+        String Token = utilset.decrypt(raw, privateKey);
         String uid = userDevicesRepository.findUidByToken(Token);
         if (yggdrasilRepository.GetPlayerNAME(uid) != null) {
             if (skin != null){
@@ -75,6 +84,7 @@ public class Textures {
                 inputStream.close();
                 Path SKINTexture = Paths.get("Data/YggdrasilTexture/hash-" + hash );
                 File file = new File(SKINTexture.toString());
+                Logger.getLogger(this.getClass().getName()).log(Level.INFO, "model: " + model);
                 int type;
                 if (model != null){
                     type = switch ((String) model) {
@@ -122,7 +132,8 @@ public class Textures {
     @PutMapping("cape")
     public <T> CompletableFuture<Object> PutCape(@RequestParam(value = "cape", required = false) T cape, HttpServletResponse response, HttpServletRequest request) throws Exception {
         String Authorization = request.getHeader("Authorization");
-        String Token = Authorization.replace("Bearer ", "").replace(" ", "");
+        String raw = Authorization.replace("Bearer ", "").replace(" ", "");
+        String Token = utilset.decrypt(raw, privateKey);
         String uid = userDevicesRepository.findUidByToken(Token);
         if (yggdrasilRepository.GetPlayerNAME(uid) != null) {
             if (cape != null){

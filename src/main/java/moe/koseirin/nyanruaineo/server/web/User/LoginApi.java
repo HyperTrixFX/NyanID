@@ -28,37 +28,37 @@ import java.util.concurrent.TimeUnit;
 
 //@RestController
 //@RequestMapping("api/zako/v1/login")
-public class LoginApi {
-
-    private final RedisService redisService;
-
-    private final AccountsRepository accountsRepository;
-
-    private final UserDevicesService userDevicesService;
-
-    private final UserDevicesRepository userDevicesRepository;
-
-    private final BanUserRepository banUserRepository;
-
-    @Value("${yggdrasil.publicKey}")
-    private String  publicKey;
-
-    @Value("${yggdrasil.privateKey}")
-    private String  privateKey;
-
-    @Value("${NyanidSetting.encryptionKey}")
-    private String encryptionKey;
-    private final Map<String, LoginApi.Const> constMap = new HashMap<>();
-
-    public  String EventID = "LoEvent1";
-
-    public LoginApi(RedisService redisService, AccountsRepository accountsRepository, UserDevicesService userDevicesService, UserDevicesRepository userDevicesRepository, BanUserRepository banUserRepository) {
-        this.redisService = redisService;
-        this.accountsRepository = accountsRepository;
-        this.userDevicesService = userDevicesService;
-        this.userDevicesRepository = userDevicesRepository;
-        this.banUserRepository = banUserRepository;
-    }
+//public class LoginApi {
+//
+//    private final RedisService redisService;
+//
+//    private final AccountsRepository accountsRepository;
+//
+//    private final UserDevicesService userDevicesService;
+//
+//    private final UserDevicesRepository userDevicesRepository;
+//
+//    private final BanUserRepository banUserRepository;
+//
+//    @Value("${yggdrasil.publicKey}")
+//    private String  publicKey;
+//
+//    @Value("${yggdrasil.privateKey}")
+//    private String  privateKey;
+//
+//    @Value("${NyanidSetting.encryptionKey}")
+//    private String encryptionKey;
+//    private final Map<String, LoginApi.Const> constMap = new HashMap<>();
+//
+//    public  String EventID = "LoEvent1";
+//
+//    public LoginApi(RedisService redisService, AccountsRepository accountsRepository, UserDevicesService userDevicesService, UserDevicesRepository userDevicesRepository, BanUserRepository banUserRepository) {
+//        this.redisService = redisService;
+//        this.accountsRepository = accountsRepository;
+//        this.userDevicesService = userDevicesService;
+//        this.userDevicesRepository = userDevicesRepository;
+//        this.banUserRepository = banUserRepository;
+//    }
 //
 //    @PostMapping
 //    public <T> Object PostMethod(@RequestBody(required = false) T data, HttpServletResponse response, HttpServletRequest request) throws Exception {
@@ -175,74 +175,74 @@ public class LoginApi {
 //
 //        }else return ErrRes.IllegalRequestException("The parameter is incorrect 杂鱼喵~",response);
 //    }
-
-
-
-    @PostMapping("2fa")
-    public Object verify2FA( HttpServletResponse response, HttpServletRequest request) {
-        String code = request.getHeader("verifyCode");
-        String Token = request.getHeader("Token");
-        if (!code.isEmpty() && !Token.isEmpty()){
-            if (code.matches("[0-9]{3,7}")) {
-                String DeToken = utilset.decrypt(Token, privateKey);
-                if (redisService.getValue(DeToken) != null) {
-                    JSONObject value = JSONObject.parseObject(redisService.getValue(DeToken).toString());
-                    String uid = value.getString("uid");
-                    String skey = value.getString("skey");
-                    String IP = request.getRemoteAddr();
-                    if (utilset.checkCode(skey, Integer.parseInt(code))) {
-                        Accounts accounts = accountsRepository.GetUser(uid);
-                        String token = utilset.RandomString(64);
-                        UserDevices userDevices = new UserDevices();
-                        userDevices.setUid(uid);
-                        userDevices.setDeviceID(utilset.RandomString(16));
-                        userDevices.setDeviceName("Web");
-                        userDevices.setToken(token);
-                        userDevices.setIp(IP);
-                        userDevices.setIsActive(true);
-                        userDevices.setSession(request.getSession().getId());
-                        userDevices.setClientId(DeToken);
-                        userDevices.setCreateTime(LocalDateTime.now());
-                        userDevicesService.save(userDevices);
-                        if (constMap.get(accounts.getEmail()) != null) {
-                            constMap.remove(accounts.getEmail());
-                        }
-                        LoginJson loginJson = new LoginJson();
-                        loginJson.setData(DeToken);
-                        loginJson.setStatus("success");
-                        loginJson.setTimestamp(LocalDateTime.now());
-                        loginJson.setToken(token);
-                        loginJson.setData(Base64.getEncoder().encodeToString(token.getBytes()));
-                        redisService.deleteValue(DeToken);
-                        return loginJson;
-                    }else {
-                        response.setStatus(403);
-                        return null;
-                    }
-                } else {
-                    response.setStatus(403);
-                    return null;
-                }
-            }else {
-                response.setStatus(403);
-                return null;
-            }
-        }else {
-            response.setStatus(403);
-            return null;
-        }
-    }
-
-    @GetMapping
-    public Object GetMethod(HttpServletResponse response){
-        return ErrRes.MethodNotAllowedException("Unsupported request patterns 杂鱼喵~",response);
-    }
-
-
-    private static class Const {
-        int requestCount;
-        Const(int requestCount) {
-            this.requestCount = requestCount;
-        }
-    }
-}
+//
+//
+//
+//    @PostMapping("2fa")
+//    public Object verify2FA( HttpServletResponse response, HttpServletRequest request) {
+//        String code = request.getHeader("verifyCode");
+//        String Token = request.getHeader("Token");
+//        if (!code.isEmpty() && !Token.isEmpty()){
+//            if (code.matches("[0-9]{3,7}")) {
+//                String DeToken = utilset.decrypt(Token, privateKey);
+//                if (redisService.getValue(DeToken) != null) {
+//                    JSONObject value = JSONObject.parseObject(redisService.getValue(DeToken).toString());
+//                    String uid = value.getString("uid");
+//                    String skey = value.getString("skey");
+//                    String IP = request.getRemoteAddr();
+//                    if (utilset.checkCode(skey, Integer.parseInt(code))) {
+//                        Accounts accounts = accountsRepository.GetUser(uid);
+//                        String token = utilset.RandomString(64);
+//                        UserDevices userDevices = new UserDevices();
+//                        userDevices.setUid(uid);
+//                        userDevices.setDeviceID(utilset.RandomString(16));
+//                        userDevices.setDeviceName("Web");
+//                        userDevices.setToken(token);
+//                        userDevices.setIp(IP);
+//                        userDevices.setIsActive(true);
+//                        userDevices.setSession(request.getSession().getId());
+//                        userDevices.setClientId(DeToken);
+//                        userDevices.setCreateTime(LocalDateTime.now());
+//                        userDevicesService.save(userDevices);
+//                        if (constMap.get(accounts.getEmail()) != null) {
+//                            constMap.remove(accounts.getEmail());
+//                        }
+//                        LoginJson loginJson = new LoginJson();
+//                        loginJson.setData(DeToken);
+//                        loginJson.setStatus("success");
+//                        loginJson.setTimestamp(LocalDateTime.now());
+//                        loginJson.setToken(token);
+//                        loginJson.setData(Base64.getEncoder().encodeToString(token.getBytes()));
+//                        redisService.deleteValue(DeToken);
+//                        return loginJson;
+//                    }else {
+//                        response.setStatus(403);
+//                        return null;
+//                    }
+//                } else {
+//                    response.setStatus(403);
+//                    return null;
+//                }
+//            }else {
+//                response.setStatus(403);
+//                return null;
+//            }
+//        }else {
+//            response.setStatus(403);
+//            return null;
+//        }
+//    }
+//
+//    @GetMapping
+//    public Object GetMethod(HttpServletResponse response){
+//        return ErrRes.MethodNotAllowedException("Unsupported request patterns 杂鱼喵~",response);
+//    }
+//
+//
+//    private static class Const {
+//        int requestCount;
+//        Const(int requestCount) {
+//            this.requestCount = requestCount;
+//        }
+//    }
+//}

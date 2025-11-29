@@ -7,10 +7,13 @@ package moe.koseirin.nyanruaineo.utils;
 
 
 
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import moe.koseirin.nyanruaineo.utils.EnumList.UUIDtype;
+import moe.koseirin.nyanruaineo.utils.WebMvc.StrictIpResolver;
 import org.apache.commons.codec.binary.Base32;
+import org.springframework.stereotype.Component;
 
 import javax.crypto.Cipher;
 import javax.crypto.Mac;
@@ -33,7 +36,10 @@ import java.util.Random;
 import java.util.UUID;
 import java.util.logging.Logger;
 
+
+
 @Slf4j
+@Component
 public class utilset {
     private static final String RSA_KEY_ALGORITHM = "RSA";
     public static final String ISSUER = "NyanId";
@@ -41,6 +47,12 @@ public class utilset {
     public static final String RANDOM_NUMBER_ALGORITHM = "SHA1PRNG";
     static int window_size = 1;
     static long second_per_size = 30L;
+
+    private final StrictIpResolver strictIpResolver;
+
+    public utilset(StrictIpResolver strictIpResolver) {
+        this.strictIpResolver = strictIpResolver;
+    }
 
     /**
      * UUID util
@@ -50,7 +62,7 @@ public class utilset {
      * @param Short //isShort?
      * @return UUID
      */
-    public static String GenerateUUID(UUIDtype uuiDtype , boolean Short , @NonNull String Char){
+    public String GenerateUUID(UUIDtype uuiDtype , boolean Short , @NonNull String Char){
         byte[] bytes = (uuiDtype.getName() + Char).getBytes(StandardCharsets.UTF_8);
         if(Short){
             return String.valueOf(UUID.nameUUIDFromBytes(bytes)).replace("-", "");
@@ -58,7 +70,7 @@ public class utilset {
         return String.valueOf(UUID.nameUUIDFromBytes(bytes));
     }
 
-    public static String ShortUUIDtoFull(String shortuuid) {
+    public String ShortUUIDtoFull(String shortuuid) {
         if (shortuuid.length() == 32){
             String fulluuid = UUID.fromString(shortuuid
                     .replaceFirst("(\\p{XDigit}{8})(\\p{XDigit}{4})(\\p{XDigit}{4})(\\p{XDigit}{4})(\\p{XDigit}{12})",
@@ -70,13 +82,13 @@ public class utilset {
         }
     }
 
-    private static String cleanKey(String key) {
+    private String cleanKey(String key) {
         return key.replaceAll("-----BEGIN (.*)-----", "")
                 .replaceAll("-----END (.*)-----", "")
                 .replaceAll("\\s", "");
     }
 
-    public static String decrypt(String data, String key) {
+    public String decrypt(String data, String key) {
         try {
             String cleanedKey = cleanKey(key);
             byte[] k = Base64.getDecoder().decode(cleanedKey);
@@ -94,7 +106,7 @@ public class utilset {
         }
     }
 
-    public static String encrypt(String data, String key) {
+    public String encrypt(String data, String key) {
         try {
             String cleanedKey = cleanKey(key);
             byte[] k = Base64.getDecoder().decode(cleanedKey);
@@ -111,6 +123,18 @@ public class utilset {
         }
     }
 
+    public String GetSessionUUID(HttpServletRequest request,String uid) {
+        String sessionID = request.getSession().getId();
+        String ip = strictIpResolver.getStrictClientIp(request);
+        Logger.getLogger("NyanID").warning("GetSessionUUID sessionID: " + sessionID);
+        Logger.getLogger("NyanID").warning("GetSessionUUID Ip: " + ip);
+        Logger.getLogger("NyanID").warning("GetSessionUUID UID: " + uid);
+        byte[] bytes = (Base64.getEncoder().encode(sessionID.getBytes())+ip+uid).getBytes(StandardCharsets.UTF_8);
+        return String.valueOf(UUID.nameUUIDFromBytes(bytes)).replace("-", "");
+    }
+
+
+
     /**
      * RSA sign
      *
@@ -118,7 +142,7 @@ public class utilset {
      * @param priKey privateKey
      * @return sign
      */
-    public static String sign(byte[] data, String priKey) throws Exception {
+    public String sign(byte[] data, String priKey) throws Exception {
         byte[] pkey = Base64.getDecoder().decode(cleanKey(priKey));
         PKCS8EncodedKeySpec pkcs8KeySpec = new PKCS8EncodedKeySpec(pkey);
         KeyFactory keyFactory = KeyFactory.getInstance(RSA_KEY_ALGORITHM);
@@ -138,7 +162,7 @@ public class utilset {
      * @param pubKey   PublicKey
      * @return boolean0
      */
-    public static boolean verify(byte[] data, byte[] sign, byte[] pubKey) throws Exception {
+    public boolean verify(byte[] data, byte[] sign, byte[] pubKey) throws Exception {
         KeyFactory keyFactory = KeyFactory.getInstance(RSA_KEY_ALGORITHM);
         X509EncodedKeySpec x509KeySpec = new X509EncodedKeySpec(pubKey);
         PublicKey publicKey = keyFactory.generatePublic(x509KeySpec);
@@ -153,7 +177,7 @@ public class utilset {
      *
      * @return SecretKey
      */
-    public static String generateSecretKey() {
+    public String generateSecretKey() {
         SecureRandom sr;
         try {
             sr = SecureRandom.getInstance(RANDOM_NUMBER_ALGORITHM);
@@ -175,7 +199,7 @@ public class utilset {
      * @param secret 对应的secretKey
      * @return 二维码字符串
      */
-    public static String getQRBarcode(String user, String secret) {
+    public String getQRBarcode(String user, String secret) {
         user = ISSUER + ":" + user;
         String format = "otpauth://totp/%s?secret=%s";
         String ret = String.format(format, user, secret);

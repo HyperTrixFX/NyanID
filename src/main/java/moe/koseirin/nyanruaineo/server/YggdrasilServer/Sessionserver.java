@@ -27,6 +27,8 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 @RestController
 @RequestMapping("api/yggdrasil/sessionserver/session/minecraft")
@@ -37,6 +39,8 @@ public class Sessionserver {
     private final YggdrasilPlayerRepository yggdrasilPlayerRepository;
 
     private final UserDevicesRepository userDevicesRepository;
+
+    private final utilset utilset;
 
     private final RedisService redisService;
 
@@ -50,10 +54,11 @@ public class Sessionserver {
     @Value("${yggdrasil.privateKey}")
     private String  privateKey;
 
-    public Sessionserver(YggdrasilRepository yggdrasilRepository, YggdrasilPlayerRepository yggdrasilPlayerRepository, UserDevicesRepository userDevicesRepository, RedisService redisService) {
+    public Sessionserver(YggdrasilRepository yggdrasilRepository, YggdrasilPlayerRepository yggdrasilPlayerRepository, UserDevicesRepository userDevicesRepository, utilset utilset, RedisService redisService) {
         this.yggdrasilRepository = yggdrasilRepository;
         this.yggdrasilPlayerRepository = yggdrasilPlayerRepository;
         this.userDevicesRepository = userDevicesRepository;
+        this.utilset = utilset;
         this.redisService = redisService;
     }
 
@@ -63,7 +68,9 @@ public class Sessionserver {
             JSONObject json = JSONObject.parseObject(JSONObject.toJSONString(data));
             if (json.containsKey("accessToken") && json.containsKey("selectedProfile")){
                 if (json.containsKey("serverId")) {
-                    String accessToken = json.getString("accessToken");
+                    String Token = json.getString("accessToken");
+                    Logger.getLogger(this.getClass().getName()).log(Level.WARNING, "Token: " + Token);
+                    String accessToken = utilset.decrypt(Token, privateKey);
                     String selectedProfile = json.getString("selectedProfile");
                     String serverId = json.getString("serverId");
                     if (!accessToken.isEmpty() && !selectedProfile.isEmpty()) {

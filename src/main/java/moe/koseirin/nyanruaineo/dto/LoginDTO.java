@@ -20,4 +20,8 @@ public class LoginDTO {
     //
     private boolean have2fa;
     private String token;
+
+    //
+    private String verifyCode;
+
 }
