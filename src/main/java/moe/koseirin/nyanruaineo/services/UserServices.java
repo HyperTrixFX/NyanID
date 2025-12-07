@@ -16,9 +16,9 @@ import moe.koseirin.nyanruaineo.utils.EnumList.EmailBody;
 import moe.koseirin.nyanruaineo.utils.EnumList.UUIDtype;
 import moe.koseirin.nyanruaineo.utils.RedisUtils.RedisService;
 import moe.koseirin.nyanruaineo.utils.Respond;
-import moe.koseirin.nyanruaineo.utils.SqlUtils.Service.NyanidUserService;
-import moe.koseirin.nyanruaineo.utils.SqlUtils.Service.UserDevicesService;
-import moe.koseirin.nyanruaineo.utils.SqlUtils.Service.UserService;
+import moe.koseirin.nyanruaineo.utils.SqlService.NyanidUserService;
+import moe.koseirin.nyanruaineo.utils.SqlService.UserDevicesService;
+import moe.koseirin.nyanruaineo.utils.SqlService.UserService;
 import moe.koseirin.nyanruaineo.utils.WebMvc.*;
 import moe.koseirin.nyanruaineo.utils.utilset;
 import org.springframework.beans.factory.annotation.Value;
@@ -321,10 +321,6 @@ public class UserServices {
 
     }
 
-    @GetMapping
-    public ResponseEntity<?> GetMethod(HttpServletResponse response){
-        return respond.respond(MediaType.APPLICATION_JSON,405,"message","Unsupported request patterns 杂鱼喵~","timestamp", LocalDateTime.now());
-    }
     private static class Const {
         int requestCount;
         Const(int requestCount) {

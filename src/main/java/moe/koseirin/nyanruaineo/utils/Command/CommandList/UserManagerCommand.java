@@ -9,7 +9,7 @@ import moe.koseirin.nyanruaineo.utils.Command.Command;
 import moe.koseirin.nyanruaineo.entity.BanUserList;
 import moe.koseirin.nyanruaineo.repository.AccountsRepository;
 import moe.koseirin.nyanruaineo.repository.BanUserRepository;
-import moe.koseirin.nyanruaineo.utils.SqlUtils.Service.BanUserService;
+import moe.koseirin.nyanruaineo.utils.SqlService.BanUserService;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;

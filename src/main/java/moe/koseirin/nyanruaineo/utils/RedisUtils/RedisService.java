@@ -55,7 +55,6 @@ public class RedisService {
      * 删除
      * @param key     键
      */
-
     public void deleteValue(String key) {
         redisTemplate.delete(key);
     }

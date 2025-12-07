@@ -18,6 +18,7 @@ import moe.koseirin.nyanruaineo.repository.UserDevicesRepository;
 import moe.koseirin.nyanruaineo.repository.YggdrasilPlayerRepository;
 import moe.koseirin.nyanruaineo.repository.YggdrasilRepository;
 import moe.koseirin.nyanruaineo.entity.Yggdrasil;
+import moe.koseirin.nyanruaineo.utils.WebMvc.StrictIpResolver;
 import moe.koseirin.nyanruaineo.utils.utilset;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
@@ -44,6 +45,8 @@ public class Sessionserver {
 
     private final RedisService redisService;
 
+    private final StrictIpResolver strictIpResolver;
+
     private final String  MojangAuthUrl = "https://api.minecraftservices.com/entitlements/license";
 
     private final String MojangSessionUrl = "https://sessionserver.mojang.com";
@@ -54,12 +57,13 @@ public class Sessionserver {
     @Value("${yggdrasil.privateKey}")
     private String  privateKey;
 
-    public Sessionserver(YggdrasilRepository yggdrasilRepository, YggdrasilPlayerRepository yggdrasilPlayerRepository, UserDevicesRepository userDevicesRepository, utilset utilset, RedisService redisService) {
+    public Sessionserver(YggdrasilRepository yggdrasilRepository, YggdrasilPlayerRepository yggdrasilPlayerRepository, UserDevicesRepository userDevicesRepository, utilset utilset, RedisService redisService, StrictIpResolver strictIpResolver) {
         this.yggdrasilRepository = yggdrasilRepository;
         this.yggdrasilPlayerRepository = yggdrasilPlayerRepository;
         this.userDevicesRepository = userDevicesRepository;
         this.utilset = utilset;
         this.redisService = redisService;
+        this.strictIpResolver = strictIpResolver;
     }
 
     @PostMapping("join")
@@ -82,7 +86,7 @@ public class Sessionserver {
                                         if (selectedProfile.equals(mcuuid.replace("-",""))){
                                             if (serverId.length() > 8){
                                                 JSONObject in = new JSONObject();
-                                                in.put("reqIp",request.getRemoteAddr());
+                                                in.put("reqIp",strictIpResolver.getStrictClientIp(request));
                                                 in.put("accessToken",accessToken);
                                                 redisService.setValueWithExpiration(serverId,JSONObject.toJSONString(in), 30,TimeUnit.SECONDS);
                                                 response.setStatus(204);

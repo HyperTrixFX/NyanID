@@ -27,6 +27,11 @@ public class EmailService {
 
     private final JavaMailSender javaMailSender;
 
+    public EmailService(JavaMailSender javaMailSender) {
+        this.javaMailSender = javaMailSender;
+    }
+
+
     @Value("${spring.mail.username}")
     private String from;
 
@@ -100,7 +105,7 @@ public class EmailService {
         }
     }
 
-    public void sendCodeMail(String user, String code) {
+    public void sendCodeMail(String email, String uid, String code) {
         try {
             // 1. 加载HTML模板
             String htmlTemplate = loadEmailTemplate();
@@ -109,7 +114,7 @@ public class EmailService {
             Map<String, String> variables = new HashMap<>();
             variables.put("emailTitle", emailTexts.get("email.title"));
             variables.put("greetingPrefix", emailTexts.get("greeting.prefix"));
-            variables.put("user", user);
+            variables.put("user", uid);
             variables.put("greetingSuffix", emailTexts.get("greeting.suffix"));
             variables.put("bodyContent", emailTexts.get("body.content"));
             variables.put("body",EmailBody.VerificationCodeBody.getBody().replace("${code}", code) );
@@ -123,7 +128,7 @@ public class EmailService {
             // 5. 准备邮件
             MimeMessagePreparator preparator = (MimeMessage mimeMessage) -> {
                 MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
-                helper.setTo(user);
+                helper.setTo(email);
                 helper.setSubject(emailTexts.get("email.subject"));
                 helper.setText(htmlBody,true);
                 helper.setFrom(from);
@@ -140,11 +145,6 @@ public class EmailService {
 
 
 
-
-
-    public EmailService(JavaMailSender javaMailSender) {
-        this.javaMailSender = javaMailSender;
-    }
 
     public void sendVerificationCode(String user, String code) {
         MimeMessagePreparator messagePreparator = mimeMessage -> {

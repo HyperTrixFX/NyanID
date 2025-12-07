@@ -10,7 +10,7 @@ import com.alibaba.fastjson2.JSONObject;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import moe.koseirin.nyanruaineo.utils.ErrUtils.ErrRes;
-import moe.koseirin.nyanruaineo.utils.SqlUtils.Service.impl.UserServiceImpl;
+import moe.koseirin.nyanruaineo.utils.SqlService.impl.UserServiceImpl;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;

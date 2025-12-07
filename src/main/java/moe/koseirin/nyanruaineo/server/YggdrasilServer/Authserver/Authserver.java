@@ -15,9 +15,10 @@ import moe.koseirin.nyanruaineo.server.YggdrasilServer.Authserver.Json.Property;
 import moe.koseirin.nyanruaineo.server.YggdrasilServer.Authserver.Json.TexturesJson;
 import moe.koseirin.nyanruaineo.utils.ErrUtils.ErrRes;
 import moe.koseirin.nyanruaineo.utils.RedisUtils.RedisService;
-import moe.koseirin.nyanruaineo.utils.SqlUtils.Service.UserDevicesService;
+import moe.koseirin.nyanruaineo.utils.SqlService.UserDevicesService;
 import moe.koseirin.nyanruaineo.entity.UserDevices;
 import moe.koseirin.nyanruaineo.entity.Yggdrasil;
+import moe.koseirin.nyanruaineo.utils.WebMvc.StrictIpResolver;
 import moe.koseirin.nyanruaineo.utils.utilset;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -51,6 +52,8 @@ public class Authserver {
 
     private final utilset utilset;
 
+    private final StrictIpResolver strictIpResolver;
+
     @Value("${NyanidSetting.encryptionKey}")
     private String encryptionKey;
     @Value("${yggdrasil.APILocation}")
@@ -62,7 +65,7 @@ public class Authserver {
     private final Map<String, Authserver.Const> constMap = new HashMap<>();
     public  String EventID = "LoEvent1";
 
-    public Authserver(AccountsRepository accountsRepository, UserDevicesService userDevicesService, UserDevicesRepository userDevicesRepository, YggdrasilRepository yggdrasilRepository, YggdrasilPlayerRepository yggdrasilPlayerRepository, BanUserRepository banUserRepository, RedisService redisService, utilset utilset) {
+    public Authserver(AccountsRepository accountsRepository, UserDevicesService userDevicesService, UserDevicesRepository userDevicesRepository, YggdrasilRepository yggdrasilRepository, YggdrasilPlayerRepository yggdrasilPlayerRepository, BanUserRepository banUserRepository, RedisService redisService, utilset utilset, StrictIpResolver strictIpResolver) {
         this.accountsRepository = accountsRepository;
         this.userDevicesService = userDevicesService;
         this.userDevicesRepository = userDevicesRepository;
@@ -71,6 +74,7 @@ public class Authserver {
         this.banUserRepository = banUserRepository;
         this.redisService = redisService;
         this.utilset = utilset;
+        this.strictIpResolver = strictIpResolver;
     }
 
 
@@ -84,7 +88,7 @@ public class Authserver {
                             String email = json.getString("username");
                             String password = json.getString("password");
                             String clientToken = json.getString("clientToken");
-                            String IP = request.getRemoteAddr();
+                            String IP = strictIpResolver.getStrictClientIp(request);
                             String ClientToken;
                             Boolean requestUser = json.getBoolean("requestUser");
                             JSONObject agent = json.getJSONObject("agent");

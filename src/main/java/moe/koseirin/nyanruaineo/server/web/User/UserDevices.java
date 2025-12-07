@@ -12,7 +12,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import moe.koseirin.nyanruaineo.server.web.User.UserJson.UserDevicesJson;
 import moe.koseirin.nyanruaineo.utils.ErrUtils.ErrRes;
 import moe.koseirin.nyanruaineo.repository.UserDevicesRepository;
-import moe.koseirin.nyanruaineo.utils.SqlUtils.Service.impl.UserDevicesServiceImpl;
+import moe.koseirin.nyanruaineo.utils.SqlService.impl.UserDevicesServiceImpl;
 import moe.koseirin.nyanruaineo.utils.utilset;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;

@@ -9,7 +9,7 @@ import com.alibaba.fastjson2.JSONObject;
 import moe.koseirin.nyanruaineo.utils.Command.Command;
 import moe.koseirin.nyanruaineo.utils.RedisUtils.RedisService;
 import moe.koseirin.nyanruaineo.repository.UserPermissionsRepository;
-import moe.koseirin.nyanruaineo.utils.SqlUtils.Service.UserPermissionsService;
+import moe.koseirin.nyanruaineo.utils.SqlService.UserPermissionsService;
 import moe.koseirin.nyanruaineo.entity.UserPermissions;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.RestController;

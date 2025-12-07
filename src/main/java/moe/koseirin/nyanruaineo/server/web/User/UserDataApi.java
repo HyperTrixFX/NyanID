@@ -22,6 +22,7 @@ import moe.koseirin.nyanruaineo.repository.AccountsRepository;
 import moe.koseirin.nyanruaineo.repository.NyanIDuserRepository;
 import moe.koseirin.nyanruaineo.repository.UserDevicesRepository;
 import moe.koseirin.nyanruaineo.repository.YggdrasilRepository;
+import moe.koseirin.nyanruaineo.utils.WebMvc.StrictIpResolver;
 import moe.koseirin.nyanruaineo.utils.utilset;
 import moe.koseirin.nyanruaineo.websocket.server.BungeeConnectHandle;
 import org.springframework.beans.factory.annotation.Value;
@@ -50,17 +51,20 @@ public class UserDataApi {
 
     private final RedisService redisService;
 
+    private final StrictIpResolver strictIpResolver;
+
     private final utilset utilset;
     @Value("${yggdrasil.privateKey}")
     private String  privateKey;
 
-    public UserDataApi(NyanIDuserRepository nyanIDuserRepository, UserDevicesRepository userDevicesRepository, YggdrasilRepository yggdrasilRepository, AccountsRepository accountsRepository, EmailService emailService, RedisService redisService, utilset utilset) {
+    public UserDataApi(NyanIDuserRepository nyanIDuserRepository, UserDevicesRepository userDevicesRepository, YggdrasilRepository yggdrasilRepository, AccountsRepository accountsRepository, EmailService emailService, RedisService redisService, StrictIpResolver strictIpResolver, utilset utilset) {
         this.nyanIDuserRepository = nyanIDuserRepository;
         this.userDevicesRepository = userDevicesRepository;
         this.yggdrasilRepository = yggdrasilRepository;
         this.accountsRepository = accountsRepository;
         this.emailService = emailService;
         this.redisService = redisService;
+        this.strictIpResolver = strictIpResolver;
         this.utilset = utilset;
     }
 
@@ -103,7 +107,7 @@ public class UserDataApi {
                                         yggdrasilRepository.UpdatePlayerName(username,uid);
                                     }
                                     accountsRepository.UpdateUsername(username,uid);
-                                    emailService.NotificationEmail(accountsRepository.GetEmailByUid(uid),request.getRemoteAddr(),"Change username",uid);
+                                    emailService.NotificationEmail(accountsRepository.GetEmailByUid(uid),strictIpResolver.getStrictClientIp(request),"Change username",uid);
                                     userDevicesRepository.LogOut(uid,"Minecraft");
                                     return success("Setting username success MiaoWu~",200);
                                 }else return ErrRes.IllegalRequestException("username is already exist  MiaoWu~",response);

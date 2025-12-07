@@ -1,4 +1,10 @@
-package moe.koseirin.nyanruaineo.utils.SqlUtils.Service.impl;
+package moe.koseirin.nyanruaineo.utils.SqlService.impl;
+
+
+/*
+ * @author KoseiRin_
+ * awa
+ */
 
 
 /*
@@ -9,7 +15,7 @@ package moe.koseirin.nyanruaineo.utils.SqlUtils.Service.impl;
 import moe.koseirin.nyanruaineo.server.web.User.UserJson.BanUserListJson;
 import moe.koseirin.nyanruaineo.entity.BanUserList;
 import moe.koseirin.nyanruaineo.repository.BanUserRepository;
-import moe.koseirin.nyanruaineo.utils.SqlUtils.Service.BanUserService;
+import moe.koseirin.nyanruaineo.utils.SqlService.BanUserService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;

@@ -1,4 +1,9 @@
-package moe.koseirin.nyanruaineo.utils.SqlUtils.Service;
+package moe.koseirin.nyanruaineo.utils.SqlService;
+
+/*
+ * @author KoseiRin_
+ * awa
+ */
 
 /*
  * @author KoseiRin_

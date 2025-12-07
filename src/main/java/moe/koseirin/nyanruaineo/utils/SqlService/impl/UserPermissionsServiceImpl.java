@@ -1,4 +1,10 @@
-package moe.koseirin.nyanruaineo.utils.SqlUtils.Service.impl;
+package moe.koseirin.nyanruaineo.utils.SqlService.impl;
+
+
+/*
+ * @author KoseiRin_
+ * awa
+ */
 
 
 /*
@@ -7,7 +13,7 @@ package moe.koseirin.nyanruaineo.utils.SqlUtils.Service.impl;
  */
 
 import moe.koseirin.nyanruaineo.repository.UserPermissionsRepository;
-import moe.koseirin.nyanruaineo.utils.SqlUtils.Service.UserPermissionsService;
+import moe.koseirin.nyanruaineo.utils.SqlService.UserPermissionsService;
 import moe.koseirin.nyanruaineo.entity.UserPermissions;
 import org.springframework.stereotype.Service;
 

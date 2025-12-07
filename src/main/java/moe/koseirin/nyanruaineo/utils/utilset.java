@@ -101,8 +101,7 @@ public class utilset {
             byte[] decrypt = cipher.doFinal(encryptedData);
             return new String(decrypt);
         } catch (Exception e) {
-            Logger.getLogger("NyanID").warning("Decrypt error: " + e);
-            return "false";
+            return null;
         }
     }
 
@@ -126,9 +125,6 @@ public class utilset {
     public String GetSessionUUID(HttpServletRequest request,String uid) {
         String sessionID = request.getSession().getId();
         String ip = strictIpResolver.getStrictClientIp(request);
-        Logger.getLogger("NyanID").warning("GetSessionUUID sessionID: " + sessionID);
-        Logger.getLogger("NyanID").warning("GetSessionUUID Ip: " + ip);
-        Logger.getLogger("NyanID").warning("GetSessionUUID UID: " + uid);
         byte[] bytes = (Base64.getEncoder().encode(sessionID.getBytes())+ip+uid).getBytes(StandardCharsets.UTF_8);
         return String.valueOf(UUID.nameUUIDFromBytes(bytes)).replace("-", "");
     }

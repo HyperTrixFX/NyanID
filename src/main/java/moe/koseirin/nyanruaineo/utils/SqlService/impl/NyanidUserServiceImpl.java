@@ -1,4 +1,9 @@
-package moe.koseirin.nyanruaineo.utils.SqlUtils.Service.impl;
+package moe.koseirin.nyanruaineo.utils.SqlService.impl;
+
+/*
+ * @author KoseiRin_
+ * awa
+ */
 
 /*
  * @author KoseiRin_
@@ -7,7 +12,7 @@ package moe.koseirin.nyanruaineo.utils.SqlUtils.Service.impl;
 
 import moe.koseirin.nyanruaineo.entity.NyanIDuser;
 import moe.koseirin.nyanruaineo.repository.NyanIDuserRepository;
-import moe.koseirin.nyanruaineo.utils.SqlUtils.Service.NyanidUserService;
+import moe.koseirin.nyanruaineo.utils.SqlService.NyanidUserService;
 import org.springframework.stereotype.Service;
 
 @Service

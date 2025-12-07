@@ -11,7 +11,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import moe.koseirin.nyanruaineo.server.web.User.UserJson.BanUserListJson;
 import moe.koseirin.nyanruaineo.utils.ErrUtils.ErrRes;
 import moe.koseirin.nyanruaineo.repository.UserDevicesRepository;
-import moe.koseirin.nyanruaineo.utils.SqlUtils.Service.impl.BanUserServiceImpl;
+import moe.koseirin.nyanruaineo.utils.SqlService.impl.BanUserServiceImpl;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;

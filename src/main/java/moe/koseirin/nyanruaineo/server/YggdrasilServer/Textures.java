@@ -11,7 +11,7 @@ import moe.koseirin.nyanruaineo.utils.ErrUtils.ErrRes;
 import moe.koseirin.nyanruaineo.repository.UserDevicesRepository;
 import moe.koseirin.nyanruaineo.repository.YggdrasilPlayerRepository;
 import moe.koseirin.nyanruaineo.repository.YggdrasilRepository;
-import moe.koseirin.nyanruaineo.utils.SqlUtils.Service.TexturesListService;
+import moe.koseirin.nyanruaineo.utils.SqlService.TexturesListService;
 import moe.koseirin.nyanruaineo.entity.TexturesList;
 import moe.koseirin.nyanruaineo.utils.utilset;
 import org.springframework.beans.factory.annotation.Value;
