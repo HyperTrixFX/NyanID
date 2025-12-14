@@ -110,7 +110,7 @@ public class UserDataServices {
             return respond.respond(MediaType.APPLICATION_JSON,403, "message","验证码错误或已过期喵!","timestamp", LocalDateTime.now());
         }
         String uid = object.getString("uid");
-        accountsRepository.UpdatePassword(uid,pwd);
+        accountsRepository.UpdatePassword(uid, utilset.HMACSHA256(encryptionKey,pwd));
         emailService.NotificationEmail(object.getString("email"), strictIpResolver.getStrictClientIp(request), "修改密码", uid);
         return respond.respond(MediaType.APPLICATION_JSON,200,"message","The password was successfully changed 杂鱼喵~","timestamp",LocalDateTime.now());
     }
