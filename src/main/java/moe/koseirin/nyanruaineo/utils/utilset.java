@@ -298,7 +298,7 @@ public class utilset {
     /**
      * @param value value
      */
-    public static String HMACSHA256(String key, String value) {
+    public String HMACSHA256(String key, String value) {
         byte[] hash = null;
         try {
             Mac sha256_HMAC = Mac.getInstance("HmacSHA256");

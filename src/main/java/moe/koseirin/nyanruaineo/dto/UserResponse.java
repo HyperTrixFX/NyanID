@@ -1,5 +1,4 @@
-package moe.koseirin.nyanruaineo.server.web.Public;
-
+package moe.koseirin.nyanruaineo.dto;
 
 /*
  * @author KoseiRin_
@@ -19,6 +18,4 @@ public class UserResponse {
         this.value = value;
         this.uid = link;
     }
-
-
 }
