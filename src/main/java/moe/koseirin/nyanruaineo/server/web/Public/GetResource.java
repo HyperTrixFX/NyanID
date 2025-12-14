@@ -35,7 +35,7 @@ public class GetResource {
 
     @GetMapping
     public Object GetImgResource(@PathVariable String type, @PathVariable String data, HttpServletResponse response) throws IOException {
-        if (banUserRepository.findBanIDByUid(data) == null) {
+        if (banUserRepository.LEVE450TRUE(data) == null) {
             switch (type) {
                 case "avatar": {
                     if (data.length() == 32) {

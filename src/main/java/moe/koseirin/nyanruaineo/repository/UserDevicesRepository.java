@@ -29,8 +29,12 @@ public interface UserDevicesRepository extends JpaRepository<UserDevices, String
     @Query(value = "SELECT uid FROM UserDevices WHERE Token = ?1  AND IsActive = true")
     String findUidByToken(String Token);
 
+    @Query(value = "SELECT uid FROM UserDevices WHERE Session = ?1  AND IsActive = true")
+    String findUidBySession(String Session);
+
     @Query(value = "SELECT u FROM UserDevices u WHERE u.ClientId = ?1  AND u.IsActive = true")
     UserDevices getByINFO(String info);
+
     @Query(value = "SELECT ClientId FROM UserDevices WHERE Token = ?1")
     String findClientIdByToken(String Token);
 
@@ -40,8 +44,6 @@ public interface UserDevicesRepository extends JpaRepository<UserDevices, String
     @Query(value = "SELECT ClientId FROM UserDevices WHERE Session = ?1  AND IsActive = true")
     String findClientIdBySession(String Session);
 
-    @Query(value = "SELECT Session FROM UserDevices WHERE Session = ?1  AND IsActive = true")
-    String findSessionBySession(String Session);
 
     @Query(value = "SELECT CreateTime FROM UserDevices WHERE Session = ?1  AND IsActive = true")
     LocalDateTime findTimeBySession(String Session);

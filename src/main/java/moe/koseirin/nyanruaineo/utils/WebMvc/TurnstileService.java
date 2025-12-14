@@ -17,6 +17,9 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 /*
  * @author KoseiRin_
  * awa
@@ -43,6 +46,7 @@ public class TurnstileService {
                     SITEVERIFY_URL, request, TurnstileResponse.class);
             return response.getBody();
         } catch (HttpClientErrorException e) {
+            Logger.getLogger(TurnstileService.class.getName()).log(Level.WARNING,e.getMessage());
         }
         TurnstileResponse errorResponse = new TurnstileResponse();
         errorResponse.setSuccess(false);

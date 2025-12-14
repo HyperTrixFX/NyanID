@@ -18,6 +18,7 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.data.redis.repository.configuration.EnableRedisRepositories;
+import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 import java.nio.file.Files;
@@ -31,6 +32,7 @@ import java.util.logging.Logger;
 
     @SpringBootApplication
     @EnableScheduling
+    @EnableAsync
     @EnableJpaRepositories(basePackages = "moe.koseirin.nyanruaineo.repository")
     @EnableRedisRepositories(basePackages = "moe.koseirin.nyanruaineo.utils.RedisUtils")
     public class NyanIdApplication {

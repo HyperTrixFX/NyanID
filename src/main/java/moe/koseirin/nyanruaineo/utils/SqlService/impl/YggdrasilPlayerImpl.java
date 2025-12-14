@@ -1,4 +1,10 @@
-package moe.koseirin.nyanruaineo.utils.SqlUtils.Service.impl;
+package moe.koseirin.nyanruaineo.utils.SqlService.impl;
+
+
+/*
+ * @author KoseiRin_
+ * awa
+ */
 
 
 /*
@@ -7,7 +13,7 @@ package moe.koseirin.nyanruaineo.utils.SqlUtils.Service.impl;
  */
 
 import moe.koseirin.nyanruaineo.repository.YggdrasilPlayerRepository;
-import moe.koseirin.nyanruaineo.utils.SqlUtils.Service.YggdrasilPlayerService;
+import moe.koseirin.nyanruaineo.utils.SqlService.YggdrasilPlayerService;
 import moe.koseirin.nyanruaineo.entity.YggdrasilPlayer;
 import org.springframework.stereotype.Service;
 

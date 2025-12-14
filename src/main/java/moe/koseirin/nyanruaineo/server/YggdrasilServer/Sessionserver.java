@@ -18,6 +18,7 @@ import moe.koseirin.nyanruaineo.repository.UserDevicesRepository;
 import moe.koseirin.nyanruaineo.repository.YggdrasilPlayerRepository;
 import moe.koseirin.nyanruaineo.repository.YggdrasilRepository;
 import moe.koseirin.nyanruaineo.entity.Yggdrasil;
+import moe.koseirin.nyanruaineo.utils.WebMvc.StrictIpResolver;
 import moe.koseirin.nyanruaineo.utils.utilset;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
@@ -27,6 +28,8 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 @RestController
 @RequestMapping("api/yggdrasil/sessionserver/session/minecraft")
@@ -38,7 +41,11 @@ public class Sessionserver {
 
     private final UserDevicesRepository userDevicesRepository;
 
+    private final utilset utilset;
+
     private final RedisService redisService;
+
+    private final StrictIpResolver strictIpResolver;
 
     private final String  MojangAuthUrl = "https://api.minecraftservices.com/entitlements/license";
 
@@ -50,11 +57,13 @@ public class Sessionserver {
     @Value("${yggdrasil.privateKey}")
     private String  privateKey;
 
-    public Sessionserver(YggdrasilRepository yggdrasilRepository, YggdrasilPlayerRepository yggdrasilPlayerRepository, UserDevicesRepository userDevicesRepository, RedisService redisService) {
+    public Sessionserver(YggdrasilRepository yggdrasilRepository, YggdrasilPlayerRepository yggdrasilPlayerRepository, UserDevicesRepository userDevicesRepository, utilset utilset, RedisService redisService, StrictIpResolver strictIpResolver) {
         this.yggdrasilRepository = yggdrasilRepository;
         this.yggdrasilPlayerRepository = yggdrasilPlayerRepository;
         this.userDevicesRepository = userDevicesRepository;
+        this.utilset = utilset;
         this.redisService = redisService;
+        this.strictIpResolver = strictIpResolver;
     }
 
     @PostMapping("join")
@@ -63,7 +72,9 @@ public class Sessionserver {
             JSONObject json = JSONObject.parseObject(JSONObject.toJSONString(data));
             if (json.containsKey("accessToken") && json.containsKey("selectedProfile")){
                 if (json.containsKey("serverId")) {
-                    String accessToken = json.getString("accessToken");
+                    String Token = json.getString("accessToken");
+                    Logger.getLogger(this.getClass().getName()).log(Level.WARNING, "Token: " + Token);
+                    String accessToken = utilset.decrypt(Token, privateKey);
                     String selectedProfile = json.getString("selectedProfile");
                     String serverId = json.getString("serverId");
                     if (!accessToken.isEmpty() && !selectedProfile.isEmpty()) {
@@ -75,7 +86,7 @@ public class Sessionserver {
                                         if (selectedProfile.equals(mcuuid.replace("-",""))){
                                             if (serverId.length() > 8){
                                                 JSONObject in = new JSONObject();
-                                                in.put("reqIp",request.getRemoteAddr());
+                                                in.put("reqIp",strictIpResolver.getStrictClientIp(request));
                                                 in.put("accessToken",accessToken);
                                                 redisService.setValueWithExpiration(serverId,JSONObject.toJSONString(in), 30,TimeUnit.SECONDS);
                                                 response.setStatus(204);

@@ -32,16 +32,16 @@ public class UserDevices {
     @Column(columnDefinition="varchar(10)",nullable = false)
     private String DeviceName;
 
-    @Column(columnDefinition="varchar(32)",nullable = false)
+    @Column(columnDefinition="varchar(52)",nullable = false)
     private String DeviceID;
 
     @Column(columnDefinition="varchar(64)",nullable = false)
     private String Token;
 
-    @Column(columnDefinition="varchar(12)",nullable = false)
+    @Column(columnDefinition="varchar(25)",nullable = false)
     private String Ip;
 
-    @Column(columnDefinition="varchar(32)",nullable = false)
+    @Column(columnDefinition="varchar(150)",nullable = false)
     private String Session;
 
     @Column(nullable = false)

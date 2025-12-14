@@ -15,9 +15,10 @@ import moe.koseirin.nyanruaineo.server.YggdrasilServer.Authserver.Json.Property;
 import moe.koseirin.nyanruaineo.server.YggdrasilServer.Authserver.Json.TexturesJson;
 import moe.koseirin.nyanruaineo.utils.ErrUtils.ErrRes;
 import moe.koseirin.nyanruaineo.utils.RedisUtils.RedisService;
-import moe.koseirin.nyanruaineo.utils.SqlUtils.Service.UserDevicesService;
+import moe.koseirin.nyanruaineo.utils.SqlService.UserDevicesService;
 import moe.koseirin.nyanruaineo.entity.UserDevices;
 import moe.koseirin.nyanruaineo.entity.Yggdrasil;
+import moe.koseirin.nyanruaineo.utils.WebMvc.StrictIpResolver;
 import moe.koseirin.nyanruaineo.utils.utilset;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -49,16 +50,22 @@ public class Authserver {
 
     private final RedisService redisService;
 
+    private final utilset utilset;
+
+    private final StrictIpResolver strictIpResolver;
+
     @Value("${NyanidSetting.encryptionKey}")
     private String encryptionKey;
     @Value("${yggdrasil.APILocation}")
     private String APILocation;
     @Value("${yggdrasil.privateKey}")
     private String  privateKey;
+    @Value("${yggdrasil.publicKey}")
+    private String  publicKey;
     private final Map<String, Authserver.Const> constMap = new HashMap<>();
     public  String EventID = "LoEvent1";
 
-    public Authserver(AccountsRepository accountsRepository, UserDevicesService userDevicesService, UserDevicesRepository userDevicesRepository, YggdrasilRepository yggdrasilRepository, YggdrasilPlayerRepository yggdrasilPlayerRepository, BanUserRepository banUserRepository, RedisService redisService) {
+    public Authserver(AccountsRepository accountsRepository, UserDevicesService userDevicesService, UserDevicesRepository userDevicesRepository, YggdrasilRepository yggdrasilRepository, YggdrasilPlayerRepository yggdrasilPlayerRepository, BanUserRepository banUserRepository, RedisService redisService, utilset utilset, StrictIpResolver strictIpResolver) {
         this.accountsRepository = accountsRepository;
         this.userDevicesService = userDevicesService;
         this.userDevicesRepository = userDevicesRepository;
@@ -66,6 +73,8 @@ public class Authserver {
         this.yggdrasilPlayerRepository = yggdrasilPlayerRepository;
         this.banUserRepository = banUserRepository;
         this.redisService = redisService;
+        this.utilset = utilset;
+        this.strictIpResolver = strictIpResolver;
     }
 
 
@@ -79,7 +88,7 @@ public class Authserver {
                             String email = json.getString("username");
                             String password = json.getString("password");
                             String clientToken = json.getString("clientToken");
-                            String IP = request.getRemoteAddr();
+                            String IP = strictIpResolver.getStrictClientIp(request);
                             String ClientToken;
                             Boolean requestUser = json.getBoolean("requestUser");
                             JSONObject agent = json.getJSONObject("agent");
@@ -130,7 +139,7 @@ public class Authserver {
                                                 userDevices.setClientId(ClientToken);
                                                 userDevices.setCreateTime(LocalDateTime.now());
                                                 userDevicesService.save(userDevices);
-                                                return Response(MCUUID, MCNAME, accessToken, ClientToken, yggdrasilPlayerRepository.getSkinTexturesType(MCUUID),requestUser,uid);
+                                                return Response(MCUUID, MCNAME, utilset.encrypt(accessToken,publicKey), ClientToken, yggdrasilPlayerRepository.getSkinTexturesType(MCUUID),requestUser,uid);
                                             } else {
                                                 if (json.getString("clientToken").length() == 32) {
                                                     if (userDevicesRepository.getByINFO(clientToken) == null) {
@@ -146,10 +155,10 @@ public class Authserver {
                                                         uD.setClientId(clientToken);
                                                         uD.setCreateTime(LocalDateTime.now());
                                                         userDevicesService.save(uD);
-                                                        return Response(MCUUID, MCNAME, accessToken, clientToken, yggdrasilPlayerRepository.getSkinTexturesType(MCUUID), requestUser, uid);
+                                                        return Response(MCUUID, MCNAME, utilset.encrypt(accessToken,publicKey), clientToken, yggdrasilPlayerRepository.getSkinTexturesType(MCUUID), requestUser, uid);
                                                     } else {
                                                         UserDevices D = userDevicesRepository.getByINFO(clientToken);
-                                                        return Response(MCUUID, MCNAME, D.getToken(), clientToken, yggdrasilPlayerRepository.getSkinTexturesType(MCUUID), requestUser, uid);
+                                                        return Response(MCUUID, MCNAME, utilset.encrypt(D.getToken(),publicKey), clientToken, yggdrasilPlayerRepository.getSkinTexturesType(MCUUID), requestUser, uid);
                                                     }
                                                 }else {
                                                     return ErrRes.YggdrasilError("非法clientToken长度,请尝试更换兼容启动器登录杂鱼喵!","ForbiddenOperationException","Invalid clientToken.",403,response);
@@ -169,7 +178,7 @@ public class Authserver {
                                             userDevices.setClientId(ClientToken);
                                             userDevices.setCreateTime(LocalDateTime.now());
                                             userDevicesService.save(userDevices);
-                                            return Response(MCUUID, MCNAME, accessToken, ClientToken, yggdrasilPlayerRepository.getSkinTexturesType(MCUUID),requestUser,uid);
+                                            return Response(MCUUID, MCNAME, utilset.encrypt(accessToken,privateKey), ClientToken, yggdrasilPlayerRepository.getSkinTexturesType(MCUUID),requestUser,uid);
                                         }
                                     }else {
                                         return ErrRes.YggdrasilError("此用户已被封禁,封禁码:["+banUserRepository.findBanIDByUid(uid)+"]杂鱼喵~", "ForbiddenOperationException","ForbiddenOperationException",403,response);
@@ -212,29 +221,29 @@ public class Authserver {
                     if (json.containsKey("clientToken")){
                         if (json.getString("clientToken").isEmpty()){
                             //未指定clientToken
-                            if (userDevicesRepository.findClientIdByToken(json.getString("accessToken")) != null){
-                                userDevicesRepository.UpdateCreateTime(LocalDateTime.now(),json.getString("accessToken"));
-                                String clientToken = userDevicesRepository.findClientIdByToken(json.getString("accessToken"));
-                                String nyanid = userDevicesRepository.findUidByToken(json.getString("accessToken"));
+                            if (userDevicesRepository.findClientIdByToken(utilset.decrypt(json.getString("accessToken"),privateKey)) != null){
+                                userDevicesRepository.UpdateCreateTime(LocalDateTime.now(),utilset.decrypt(json.getString("accessToken"),privateKey));
+                                String clientToken = userDevicesRepository.findClientIdByToken(utilset.decrypt(json.getString("accessToken"),privateKey));
+                                String nyanid = userDevicesRepository.findUidByToken(utilset.decrypt(json.getString("accessToken"),privateKey));
                                 String accessToken = utilset.RandomString(32);
-                                userDevicesRepository.UpdateAccessToken(json.getString("accessToken"),accessToken);
+                                userDevicesRepository.UpdateAccessToken(utilset.decrypt(json.getString("accessToken"),privateKey),accessToken);
                                 Yggdrasil yggdrasil = yggdrasilRepository.YggdrasilPlayer(nyanid);
-                                return RefreshResponse(IsSelectedProfile,json.getBoolean("requestUser"),accessToken,clientToken,yggdrasil.getPlayername(),yggdrasil.getUuid(),nyanid);
+                                return RefreshResponse(IsSelectedProfile,json.getBoolean("requestUser"),utilset.encrypt(accessToken,publicKey),clientToken,yggdrasil.getPlayername(),yggdrasil.getUuid(),nyanid);
                             }else {
                                 //错误accessToken
                                 return ErrRes.YggdrasilError("登录信息已过期杂鱼喵!","ForbiddenOperationException","Invalid token.",403,response);
                             }
                         }else {
                             //指定clientToken
-                            if (userDevicesRepository.findClientIdByToken(json.getString("accessToken")) != null){
-                                String clientToken = userDevicesRepository.findClientIdByToken(json.getString("accessToken"));
+                            if (userDevicesRepository.findClientIdByToken(utilset.decrypt(json.getString("accessToken"),privateKey)) != null){
+                                String clientToken = userDevicesRepository.findClientIdByToken(utilset.decrypt(json.getString("accessToken"),privateKey));
                                 if (clientToken.equals(json.getString("clientToken"))){
-                                    userDevicesRepository.UpdateCreateTime(LocalDateTime.now(),json.getString("accessToken"));
-                                    String nyanid = userDevicesRepository.findUidByToken(json.getString("accessToken"));
+                                    userDevicesRepository.UpdateCreateTime(LocalDateTime.now(),utilset.decrypt(json.getString("accessToken"),privateKey));
+                                    String nyanid = userDevicesRepository.findUidByToken(utilset.decrypt(json.getString("accessToken"),privateKey));
                                     String accessToken = utilset.RandomString(32);
-                                    userDevicesRepository.UpdateAccessToken(json.getString("accessToken"),accessToken);
+                                    userDevicesRepository.UpdateAccessToken(utilset.decrypt(json.getString("accessToken"),privateKey),accessToken);
                                     Yggdrasil yggdrasil = yggdrasilRepository.YggdrasilPlayer(nyanid);
-                                    return RefreshResponse(IsSelectedProfile,json.getBoolean("requestUser"),accessToken,clientToken,yggdrasil.getPlayername(),yggdrasil.getUuid(),nyanid);
+                                    return RefreshResponse(IsSelectedProfile,json.getBoolean("requestUser"),utilset.encrypt(accessToken,publicKey),clientToken,yggdrasil.getPlayername(),yggdrasil.getUuid(),nyanid);
                                 }else {
                                     return ErrRes.YggdrasilError("登录信息已过期杂鱼喵!","ForbiddenOperationException","Invalid clientToken.",403,response);
                                 }
@@ -245,14 +254,14 @@ public class Authserver {
                         }
                     }else {
                         //未指定clientToken
-                        if (userDevicesRepository.findClientIdByToken(json.getString("accessToken")) != null){
-                            userDevicesRepository.UpdateCreateTime(LocalDateTime.now(),json.getString("accessToken"));
-                            String clientToken = userDevicesRepository.findClientIdByToken(json.getString("accessToken"));
-                            String nyanid = userDevicesRepository.findUidByToken(json.getString("accessToken"));
+                        if (userDevicesRepository.findClientIdByToken(utilset.decrypt(json.getString("accessToken"),privateKey)) != null){
+                            userDevicesRepository.UpdateCreateTime(LocalDateTime.now(),utilset.decrypt(json.getString("accessToken"),privateKey));
+                            String clientToken = userDevicesRepository.findClientIdByToken(utilset.decrypt(json.getString("accessToken"),privateKey));
+                            String nyanid = userDevicesRepository.findUidByToken(utilset.decrypt(json.getString("accessToken"),privateKey));
                             String accessToken = utilset.RandomString(32);
-                            userDevicesRepository.UpdateAccessToken(json.getString("accessToken"),accessToken);
+                            userDevicesRepository.UpdateAccessToken(utilset.decrypt(json.getString("accessToken"),privateKey),accessToken);
                             Yggdrasil yggdrasil = yggdrasilRepository.YggdrasilPlayer(nyanid);
-                            return RefreshResponse(IsSelectedProfile,json.getBoolean("requestUser"),accessToken,clientToken,yggdrasil.getPlayername(),yggdrasil.getUuid(),nyanid);
+                            return RefreshResponse(IsSelectedProfile,json.getBoolean("requestUser"),utilset.encrypt(accessToken,publicKey),clientToken,yggdrasil.getPlayername(),yggdrasil.getUuid(),nyanid);
                         }else {
                             //错误accessToken
                             return ErrRes.YggdrasilError("登录信息已过期杂鱼喵!","ForbiddenOperationException","Invalid token.",403,response);
@@ -278,7 +287,7 @@ public class Authserver {
                     if (json.containsKey("clientToken")){
                         if (json.getString("clientToken").isEmpty()){
                             //未指定clientToken
-                            if (userDevicesRepository.findClientIdByToken(json.getString("accessToken")) != null&& userDevicesRepository.getActive(json.getString("accessToken"))){
+                            if (userDevicesRepository.findClientIdByToken(utilset.decrypt(json.getString("accessToken"),privateKey)) != null&& userDevicesRepository.getActive(utilset.decrypt(json.getString("accessToken"),privateKey))){
                                 response.setStatus(204);
                                 return null;
                             }else {
@@ -287,9 +296,9 @@ public class Authserver {
                             }
                         }else {
                             //指定clientToken
-                            if (userDevicesRepository.findClientIdByToken(json.getString("accessToken")) != null){
-                                String clientToken = userDevicesRepository.findClientIdByToken(json.getString("accessToken"));
-                                if (clientToken.equals(json.getString("clientToken")) && userDevicesRepository.getActive(json.getString("accessToken"))){
+                            if (userDevicesRepository.findClientIdByToken(utilset.decrypt(json.getString("accessToken"),privateKey)) != null){
+                                String clientToken = userDevicesRepository.findClientIdByToken(utilset.decrypt(json.getString("accessToken"),privateKey));
+                                if (clientToken.equals(json.getString("clientToken")) && userDevicesRepository.getActive(utilset.decrypt(json.getString("accessToken"),privateKey))){
                                     response.setStatus(204);
                                     return null;
                                 }else {
@@ -302,7 +311,7 @@ public class Authserver {
                         }
                     }else {
                         //未指定clientToken
-                        if (userDevicesRepository.findClientIdByToken(json.getString("accessToken")) != null&& userDevicesRepository.getActive(json.getString("accessToken"))){
+                        if (userDevicesRepository.findClientIdByToken(utilset.decrypt(json.getString("accessToken"),privateKey)) != null&& userDevicesRepository.getActive(utilset.decrypt(json.getString("accessToken"),privateKey))){
                             response.setStatus(204);
                             return null;
                         }else {

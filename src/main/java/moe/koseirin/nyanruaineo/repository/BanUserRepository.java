@@ -22,8 +22,11 @@ import java.io.Serializable;
 @Repository
 public interface BanUserRepository extends JpaRepository<BanUserList, String>,Serializable {
 
-    @Query(value = "SELECT BanID FROM  BanUserList WHERE uid = ?1 AND isActive = true ")
-   String findBanIDByUid(String uid);
+    @Query(value = "SELECT a FROM BanUserList a WHERE a.uid = ?1 AND a.isActive = true AND a.Type= 4 or a.Type = 5 or a.Type = 0")
+    BanUserList LEVE450TRUE(String uid);
+
+    @Query(value = "SELECT a.BanID FROM BanUserList a WHERE a.uid = ?1 AND a.isActive = true")
+    String findBanIDByUid(String uid);
 
     @Query(value = "SELECT COUNT(*) AS nums FROM BanUserList WHERE uid = ?1 AND isActive = false AND BannedBy = 'NAC' ")
     int COUNTByUid(String uid);

@@ -35,7 +35,7 @@ public class CorsFilter implements Filter {
         // 允许跨域的方法
         response.addHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS, DELETE, PATCH, PUT, HEAD");
         // 允许跨域请求携带的请求头
-        response.addHeader("Access-Control-Allow-Headers", "LoginForWeb, verifyCode,Token, Event, Authorization, Content-Type, Content-Length, auth-token, Accept, X-Requested-With`");
+        response.addHeader("Access-Control-Allow-Headers", "LoginForWeb, Event, Authorization, Content-Type, Content-Length, auth-token, Accept, X-Requested-With`");
         // 返回结果可以用于缓存的最长时间，单位是秒。-1表示禁用
         response.addHeader("Access-Control-Max-Age", "36000");
 

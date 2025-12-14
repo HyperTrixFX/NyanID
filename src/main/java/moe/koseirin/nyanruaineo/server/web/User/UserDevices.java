@@ -12,7 +12,9 @@ import jakarta.servlet.http.HttpServletResponse;
 import moe.koseirin.nyanruaineo.server.web.User.UserJson.UserDevicesJson;
 import moe.koseirin.nyanruaineo.utils.ErrUtils.ErrRes;
 import moe.koseirin.nyanruaineo.repository.UserDevicesRepository;
-import moe.koseirin.nyanruaineo.utils.SqlUtils.Service.impl.UserDevicesServiceImpl;
+import moe.koseirin.nyanruaineo.utils.SqlService.impl.UserDevicesServiceImpl;
+import moe.koseirin.nyanruaineo.utils.utilset;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -26,16 +28,23 @@ public class UserDevices {
 
     private final UserDevicesRepository userDevicesRepository;
 
-    public UserDevices(UserDevicesServiceImpl userDevicesService, UserDevicesRepository userDevicesRepository) {
+    private final utilset utilset;
+
+    @Value("${yggdrasil.privateKey}")
+    private String  privateKey;
+
+    public UserDevices(UserDevicesServiceImpl userDevicesService, UserDevicesRepository userDevicesRepository, utilset utilset) {
         this.userDevicesService = userDevicesService;
         this.userDevicesRepository = userDevicesRepository;
+        this.utilset = utilset;
     }
 
 
     @GetMapping(produces = "application/json")
     public  Object SearchUserApi(HttpServletResponse response,HttpServletRequest request){
         String Authorization = request.getHeader("Authorization");
-        String Token = Authorization.replace("Bearer ", "").replace(" ", "");
+        String raw = Authorization.replace("Bearer ", "").replace(" ", "");
+        String Token = utilset.decrypt(raw,privateKey);
         String uid = userDevicesRepository.findUidByToken(Token);
             List<UserDevicesJson> result = userDevicesService.GetDevices(uid);
             if (result.isEmpty()){

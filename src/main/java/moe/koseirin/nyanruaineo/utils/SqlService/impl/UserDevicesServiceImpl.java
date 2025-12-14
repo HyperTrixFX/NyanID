@@ -1,4 +1,9 @@
-package moe.koseirin.nyanruaineo.utils.SqlUtils.Service.impl;
+package moe.koseirin.nyanruaineo.utils.SqlService.impl;
+
+/*
+ * @author KoseiRin_
+ * awa
+ */
 
 /*
  * @author KoseiRin_
@@ -7,7 +12,7 @@ package moe.koseirin.nyanruaineo.utils.SqlUtils.Service.impl;
 
 import moe.koseirin.nyanruaineo.server.web.User.UserJson.UserDevicesJson;
 import moe.koseirin.nyanruaineo.repository.UserDevicesRepository;
-import moe.koseirin.nyanruaineo.utils.SqlUtils.Service.UserDevicesService;
+import moe.koseirin.nyanruaineo.utils.SqlService.UserDevicesService;
 import moe.koseirin.nyanruaineo.entity.UserDevices;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;

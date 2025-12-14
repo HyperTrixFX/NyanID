@@ -47,6 +47,12 @@ public class Accounts{
     private String SecretKey;
 
     @Column
+    private String QQAccessToken;
+
+    @Column
+    private String GithubAccessToken;
+
+    @Column
     private LocalDateTime RegisterTime;
 
 }

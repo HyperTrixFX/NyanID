@@ -1,4 +1,9 @@
-package moe.koseirin.nyanruaineo.utils.SqlUtils.Service.impl;
+package moe.koseirin.nyanruaineo.utils.SqlService.impl;
+
+/*
+ * @author KoseiRin_
+ * awa
+ */
 
 /*
  * @author KoseiRin_
@@ -6,7 +11,7 @@ package moe.koseirin.nyanruaineo.utils.SqlUtils.Service.impl;
  */
 
 import moe.koseirin.nyanruaineo.repository.TexturesListRepository;
-import moe.koseirin.nyanruaineo.utils.SqlUtils.Service.TexturesListService;
+import moe.koseirin.nyanruaineo.utils.SqlService.TexturesListService;
 import moe.koseirin.nyanruaineo.entity.TexturesList;
 import org.springframework.stereotype.Service;
 

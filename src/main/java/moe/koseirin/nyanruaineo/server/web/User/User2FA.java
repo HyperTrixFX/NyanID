@@ -13,6 +13,7 @@ import moe.koseirin.nyanruaineo.entity.Accounts;
 import moe.koseirin.nyanruaineo.repository.AccountsRepository;
 import moe.koseirin.nyanruaineo.repository.UserDevicesRepository;
 import moe.koseirin.nyanruaineo.utils.utilset;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -21,20 +22,25 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("api/zako/v1/user/2fa")
 public class User2FA {
 
-
+    @Value("${yggdrasil.privateKey}")
+    private String  privateKey;
     private final UserDevicesRepository userDevicesRepository;
 
     private final AccountsRepository accountsRepository;
 
-    public User2FA(UserDevicesRepository userDevicesRepository, AccountsRepository accountsRepository) {
+    private final utilset utilset;
+
+    public User2FA(UserDevicesRepository userDevicesRepository, AccountsRepository accountsRepository, utilset utilset) {
         this.userDevicesRepository = userDevicesRepository;
         this.accountsRepository = accountsRepository;
+        this.utilset = utilset;
     }
 
     @PostMapping("open2fa")
     public Object  Open2fa(HttpServletRequest request, HttpServletResponse response){
         String Authorization = request.getHeader("Authorization");
-        String Token = Authorization.replace("Bearer ", "").replace(" ", "");
+        String rawToken = Authorization.replace("Bearer ", "").replace(" ", "");
+        String Token = utilset.decrypt(rawToken, privateKey);
         String uid = userDevicesRepository.findUidByToken(Token);
         Accounts accounts =  accountsRepository.GetUser(uid);
         if (accounts.getSecretKey() == null){
@@ -55,7 +61,8 @@ public class User2FA {
     @PostMapping("close2fa")
     public Object  Close2fa(HttpServletRequest request, HttpServletResponse response){
         String Authorization = request.getHeader("Authorization");
-        String Token = Authorization.replace("Bearer ", "").replace(" ", "");
+        String rawToken = Authorization.replace("Bearer ", "").replace(" ", "");
+        String Token = utilset.decrypt(rawToken, privateKey);
         String uid = userDevicesRepository.findUidByToken(Token);
         Accounts accounts =  accountsRepository.GetUser(uid);
         if (accounts.getSecretKey() != null){

@@ -13,14 +13,16 @@ package moe.koseirin.nyanruaineo.utils;
 import com.alibaba.fastjson2.JSONObject;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+@Component
 public class Respond {
 
-    public static ResponseEntity<?> respond(MediaType mediaType, int code, Object... objects) {
+    public ResponseEntity<?> respond(MediaType mediaType, int code, Object... objects) {
         if (objects == null || objects.length == 0) {
             return ResponseEntity.status(code).build();
         }

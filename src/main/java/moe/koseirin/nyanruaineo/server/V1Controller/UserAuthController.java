@@ -10,6 +10,7 @@ import com.alibaba.fastjson2.JSONObject;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import moe.koseirin.nyanruaineo.NyanIdApplication;
+import moe.koseirin.nyanruaineo.dto.LoginDTO;
 import moe.koseirin.nyanruaineo.dto.RegisterConfirmDTO;
 import moe.koseirin.nyanruaineo.dto.RegisterDTO;
 import moe.koseirin.nyanruaineo.services.UserServices;
@@ -42,6 +43,16 @@ public class UserAuthController {
     @PostMapping("/verification")
     public ResponseEntity<?> registerConfirm(@RequestBody RegisterConfirmDTO registerConfirmDTO,HttpServletRequest request){
         return userServices.registerConfirm(registerConfirmDTO.getCode(),request);
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<?> Login(@RequestBody LoginDTO loginDTO,HttpServletRequest request) throws Exception {
+        return userServices.login(loginDTO.getEmail(), loginDTO.getPassword(), loginDTO.getIdempotencyKey(), request);
+    }
+
+    @PostMapping("/2fa")
+    public ResponseEntity<?> loginAt2FA(@RequestBody LoginDTO loginDTO,HttpServletRequest request){
+        return userServices.l2fa(request, loginDTO.getVerifyCode(), loginDTO.getToken());
     }
 
 

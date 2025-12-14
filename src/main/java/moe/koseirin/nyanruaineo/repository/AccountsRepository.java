@@ -66,8 +66,8 @@ public interface AccountsRepository extends JpaRepository<Accounts, String>, Ser
 
     @Modifying
     @Transactional
-    @Query(value = "update Accounts set password = ?2 where email = ?1")
-    void UpdatePassword(String email,String pwd);
+    @Query(value = "update Accounts set password = ?2 where uid = ?1")
+    void UpdatePassword(String uid,String pwd);
 
     @Query("SELECT u FROM Accounts u " +
             "WHERE LOWER(u.username) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
