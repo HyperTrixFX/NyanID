@@ -28,10 +28,10 @@ public class Accounts{
     @Column(columnDefinition="varchar(150)",nullable = false)
     private String uid;
 
-    @Column(nullable = false)
+    @Column
     private String password;
 
-    @Column(nullable = false)
+    @Column
     private String email;
 
     @Column
@@ -47,7 +47,7 @@ public class Accounts{
     private String SecretKey;
 
     @Column
-    private String QQAccessToken;
+    private String MicrosoftAccount;
 
     @Column
     private String GithubAccessToken;

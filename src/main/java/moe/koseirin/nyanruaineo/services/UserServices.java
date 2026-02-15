@@ -180,6 +180,8 @@ public class UserServices {
         accounts.setPassword(password);
         accounts.setUsername(username);
         accounts.setBind(null);
+        accounts.setGithubAccessToken(null);
+        accounts.setMicrosoftAccount(null);
         accounts.setSecretKey(null);
         accounts.setIsActive(true);
         accounts.setRegisterTime(LocalDateTime.now());

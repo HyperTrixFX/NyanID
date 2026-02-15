@@ -284,7 +284,7 @@ public class utilset {
     /**
      * @param length 字符串长度
      */
-    public static String RandomString(int length) {
+    public  String RandomString(int length) {
         String characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
         StringBuilder flt = new StringBuilder();
         Random random = new Random();

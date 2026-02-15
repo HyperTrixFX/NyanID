@@ -75,9 +75,9 @@ public class AuthenticateCheck implements HandlerInterceptor {
             return false;
         }
         if (banUserRepository.LEVE450TRUE(userId) != null) {
-            PrintWriter(response,Err(ErrorCode.Unauthorized.getCode(),ErrorCode.Unauthorized.getMessage(),"Zako~account is banned for admin MiaoWu~ "),401);            return false;
+            PrintWriter(response,Err(ErrorCode.Unauthorized.getCode(),ErrorCode.Unauthorized.getMessage(),"Zako~account is banned for admin MiaoWu~ "),401);
+            return false;
         }
-
         return validateEventAndMethod(event, requestMethod, response);
     }
 
@@ -94,7 +94,8 @@ public class AuthenticateCheck implements HandlerInterceptor {
             case "DE": // Delete - DELETE
                 return validateMethod(requestMethod, "DELETE", response);
             default:
-                PrintWriter(response, Err(ErrorCode.IllegalRequest.getCode(), ErrorCode.IllegalRequest.getMessage(), "Zako~Unknown action parameters MiaoWu~"), 403);                return false;
+                PrintWriter(response, Err(ErrorCode.IllegalRequest.getCode(), ErrorCode.IllegalRequest.getMessage(), "Zako~Unknown action parameters MiaoWu~"), 403);
+                return false;
         }
     }
 

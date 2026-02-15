@@ -2,11 +2,16 @@ package moe.koseirin.nyanruaineo.services;
 
 import com.alibaba.fastjson2.JSONObject;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import moe.koseirin.nyanruaineo.dto.UserDataDTO;
 import moe.koseirin.nyanruaineo.entity.Accounts;
 import moe.koseirin.nyanruaineo.entity.BanUserList;
+import moe.koseirin.nyanruaineo.entity.NyanIDuser;
 import moe.koseirin.nyanruaineo.repository.AccountsRepository;
 import moe.koseirin.nyanruaineo.repository.BanUserRepository;
+import moe.koseirin.nyanruaineo.repository.NyanIDuserRepository;
 import moe.koseirin.nyanruaineo.repository.UserDevicesRepository;
+import moe.koseirin.nyanruaineo.services.impl.UserDataImpl;
 import moe.koseirin.nyanruaineo.utils.EmailHelper.EmailService;
 import moe.koseirin.nyanruaineo.utils.ErrUtils.SJson;
 import moe.koseirin.nyanruaineo.utils.RedisUtils.RedisService;
@@ -18,7 +23,13 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
@@ -33,8 +44,10 @@ public class UserDataServices {
     private final BanUserRepository banUserRepository;
     private final UserDevicesRepository userDevicesRepository;
     private final StrictIpResolver strictIpResolver;
+    private final UserDataImpl userDataImpl;
+    private final NyanIDuserRepository nyanIDuserRepository;
 
-    public UserDataServices(AccountsRepository accountsRepository, EmailService emailService, RedisService redisService, utilset utilset, Respond respond, BanUserRepository banUserRepository, UserDevicesRepository userDevicesRepository, StrictIpResolver strictIpResolver) {
+    public UserDataServices(AccountsRepository accountsRepository, EmailService emailService, RedisService redisService, utilset utilset, Respond respond, BanUserRepository banUserRepository, UserDevicesRepository userDevicesRepository, StrictIpResolver strictIpResolver, UserDataImpl userDataImpl, NyanIDuserRepository nyanIDuserRepository) {
         this.accountsRepository = accountsRepository;
         this.emailService = emailService;
         this.redisService = redisService;
@@ -43,6 +56,8 @@ public class UserDataServices {
         this.banUserRepository = banUserRepository;
         this.userDevicesRepository = userDevicesRepository;
         this.strictIpResolver = strictIpResolver;
+        this.userDataImpl = userDataImpl;
+        this.nyanIDuserRepository = nyanIDuserRepository;
     }
 
     public String EventID = "FP1";
@@ -114,4 +129,85 @@ public class UserDataServices {
         emailService.NotificationEmail(object.getString("email"), strictIpResolver.getStrictClientIp(request), "修改密码", uid);
         return respond.respond(MediaType.APPLICATION_JSON,200,"message","The password was successfully changed 杂鱼喵~","timestamp",LocalDateTime.now());
     }
+
+    @Transactional
+    public ResponseEntity<?> ActionMethod(HttpServletRequest request, int action, String nickname, String username, String description, String code){
+        Accounts accounts = GetUser(request);
+        if (accounts == null) {
+            return respond.respond(MediaType.APPLICATION_JSON,500, "message","未知登录绕过喵！！！","timestamp", LocalDateTime.now());
+        }
+        NyanIDuser nyanIDuser = nyanIDuserRepository.getUser(accounts.getUid());;
+        // 根据action执行不同操作
+        switch (action) {
+            case 0: // 设置昵称
+                return userDataImpl.handleUpdateNickname(nickname, nyanIDuser, accounts.getUid());
+
+            case 1: // 更改用户名
+                return userDataImpl.handleUpdateUsername(username, accounts, request);
+
+            case 2: // 更改简介
+                return userDataImpl.handleUpdateDescription(description, accounts.getUid());
+
+            case 3: // 绑定Minecraft账号
+                return userDataImpl.handleBindMinecraft(code,accounts);
+
+            case 4: // 切换头像模式
+                return userDataImpl.handleToggleAvatarMode(accounts.getUid());
+
+            default:
+                return respond.respond(MediaType.APPLICATION_JSON,400, "message","RequestBody action is invalid MiaoWu~","timestamp", LocalDateTime.now());
+        }
+    }
+
+    @Transactional
+    public ResponseEntity<?> PutMethod(MultipartFile avatar, HttpServletRequest request, HttpServletResponse response) throws IOException {
+        if (avatar == null) {
+            return respond.respond(MediaType.APPLICATION_JSON,403, "message","RequestParam avatar is NULL  MiaoWu~","timestamp", LocalDateTime.now());
+        }
+        MultipartFile avatarFile = avatar;
+        if (request.getContentType() == null || !request.getContentType().matches("multipart/form-data")) {
+            return respond.respond(MediaType.APPLICATION_JSON,403, "message","RequestParam avatar is NULL  MiaoWu~","timestamp", LocalDateTime.now());
+        }
+        if (avatarFile.getContentType() == null) {
+            return respond.respond(MediaType.APPLICATION_JSON,403, "message","RequestParam avatar is NULL  MiaoWu~","timestamp", LocalDateTime.now());
+        }
+
+        String contentType = avatarFile.getContentType();
+        if (!contentType.matches("image/.*")) {
+            return respond.respond(MediaType.APPLICATION_JSON,403, "message","RequestParam avatar is not image MiaoWu~","timestamp", LocalDateTime.now());
+        }
+
+        if (avatarFile.getSize() >= 1024 * 1024 * 10) {
+            return respond.respond(MediaType.APPLICATION_JSON,403, "message","RequestParam avatar is not image MiaoWu~","timestamp", LocalDateTime.now());
+        }
+        Accounts accounts = GetUser(request);
+        SaveUserAvatar(accounts.getUid(), avatarFile);
+        return respond.respond(MediaType.APPLICATION_JSON,200, "message","Setting avatar success MiaoWu~","timestamp", LocalDateTime.now());
+
+    }
+
+
+
+    private Accounts GetUser(HttpServletRequest request) {
+        String Authorization = request.getHeader("Authorization");
+        String rawToken = Authorization.replace("Bearer ", "").replace(" ", "");
+        String Token = utilset.decrypt(rawToken, privateKey);
+        String uid = userDevicesRepository.findUidByToken(Token);
+        Accounts accounts =  accountsRepository.GetUser(uid);
+        return accounts;
+    }
+
+    private void SaveUserAvatar(String uid, MultipartFile avatar) throws IOException {
+        Path UserAvatar = Paths.get("Data/UserAvatar/UA-");
+        File originalFile = new File(UserAvatar+uid+".png");
+        if (originalFile.isFile()) {
+            originalFile.delete();
+            utilset.reduceImageByRatio(avatar.getInputStream(), UserAvatar,uid,1, 1);
+        }else {
+            utilset.reduceImageByRatio(avatar.getInputStream(), UserAvatar,uid,1, 1);
+        }
+    }
+
+
+
 }

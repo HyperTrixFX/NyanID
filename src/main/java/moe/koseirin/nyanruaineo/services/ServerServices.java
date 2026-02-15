@@ -49,7 +49,6 @@ public class ServerServices {
     public ResponseEntity<?> info(HttpServletRequest request){
         String message = msg[(int) (random() * msg.length)];
         Object[] responseParams;
-
         if (redisService.getValue("ServerInfo") != null) {
             JSONObject notification = JSONObject.parseObject(redisService.getValue("ServerInfo").toString());
             responseParams = new Object[]{

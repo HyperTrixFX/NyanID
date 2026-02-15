@@ -26,7 +26,6 @@ public class MianServer {
 
     @PostMapping
     public Object PostMethod(HttpServletResponse response){
-        response.setHeader("NekoServer-ABYDOS-NYANID", utilset.RandomString(10));
         SJson sJson = new SJson();
         sJson.setStatus(200);
         sJson.setMessage("Ok!");
@@ -36,7 +35,6 @@ public class MianServer {
     }
     @GetMapping
     public Object GetMethod(HttpServletResponse response){
-        response.setHeader("NekoServer-ABYDOS-NYANID", utilset.RandomString(10));
         response.setHeader("X-Authlib-Injector-API-Location", "/api/yggdrasil");
         SJson sJson = new SJson();
         sJson.setStatus(200);
