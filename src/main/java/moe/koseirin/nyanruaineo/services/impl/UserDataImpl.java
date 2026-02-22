@@ -1,22 +1,20 @@
 package moe.koseirin.nyanruaineo.services.impl;
 
-import com.alibaba.fastjson2.JSONObject;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import moe.koseirin.nyanruaineo.NyanIdApplication;
 import moe.koseirin.nyanruaineo.entity.Accounts;
 import moe.koseirin.nyanruaineo.entity.NyanIDuser;
+import moe.koseirin.nyanruaineo.network.Packet.Server.S01Packet;
 import moe.koseirin.nyanruaineo.repository.AccountsRepository;
 import moe.koseirin.nyanruaineo.repository.NyanIDuserRepository;
 import moe.koseirin.nyanruaineo.repository.UserDevicesRepository;
 import moe.koseirin.nyanruaineo.repository.YggdrasilRepository;
 import moe.koseirin.nyanruaineo.utils.EmailHelper.EmailService;
-import moe.koseirin.nyanruaineo.utils.ErrUtils.SJson;
 import moe.koseirin.nyanruaineo.utils.RedisUtils.RedisService;
 import moe.koseirin.nyanruaineo.utils.Respond;
 import moe.koseirin.nyanruaineo.utils.WebMvc.StrictIpResolver;
 import moe.koseirin.nyanruaineo.utils.utilset;
-import moe.koseirin.nyanruaineo.websocket.server.BungeeConnectHandle;
+import moe.koseirin.nyanruaineo.websocket.Handler.BungeeWebSocketHandler;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -43,8 +41,9 @@ public class UserDataImpl {
     private final StrictIpResolver strictIpResolver;
     private final utilset utilset;
     private final Respond respond;
+    private final BungeeWebSocketHandler bungeeWebSocketHandler;
 
-    public UserDataImpl(NyanIDuserRepository nyanIDuserRepository, UserDevicesRepository userDevicesRepository, YggdrasilRepository yggdrasilRepository, AccountsRepository accountsRepository, EmailService emailService, RedisService redisService, StrictIpResolver strictIpResolver, utilset utilset, Respond respond) {
+    public UserDataImpl(NyanIDuserRepository nyanIDuserRepository, UserDevicesRepository userDevicesRepository, YggdrasilRepository yggdrasilRepository, AccountsRepository accountsRepository, EmailService emailService, RedisService redisService, StrictIpResolver strictIpResolver, utilset utilset, Respond respond, BungeeWebSocketHandler bungeeWebSocketHandler) {
         this.nyanIDuserRepository = nyanIDuserRepository;
         this.userDevicesRepository = userDevicesRepository;
         this.yggdrasilRepository = yggdrasilRepository;
@@ -54,6 +53,7 @@ public class UserDataImpl {
         this.strictIpResolver = strictIpResolver;
         this.utilset = utilset;
         this.respond = respond;
+        this.bungeeWebSocketHandler = bungeeWebSocketHandler;
     }
 
     // 处理昵称更新
@@ -156,11 +156,8 @@ public class UserDataImpl {
         redisService.deleteValue(bindCode);
 
         // 发送BungeeCord消息
-        JSONObject bungeeMessage = new JSONObject();
-        bungeeMessage.put("packet", "S01");
-        bungeeMessage.put("uuid", uuid);
-        bungeeMessage.put("nuid", account.getUid());
-        BungeeConnectHandle.sendMessage(JSONObject.toJSONString(bungeeMessage));
+        S01Packet packet = new S01Packet(uuid, account.getUid());
+        bungeeWebSocketHandler.broadcastPacket(packet);
         return respond.respond(MediaType.APPLICATION_JSON, 200, "message", "绑定成功喵~, uuid: " + uuid, "timestamp", LocalDateTime.now());
     }
 

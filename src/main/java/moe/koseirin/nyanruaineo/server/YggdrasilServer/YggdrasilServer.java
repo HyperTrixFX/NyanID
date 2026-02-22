@@ -16,7 +16,7 @@ import moe.koseirin.nyanruaineo.server.YggdrasilServer.YggdrasilServerJson.Yggdr
 import moe.koseirin.nyanruaineo.repository.AccountsRepository;
 import moe.koseirin.nyanruaineo.repository.UserDevicesRepository;
 import moe.koseirin.nyanruaineo.repository.YggdrasilRepository;
-import moe.koseirin.nyanruaineo.utils.EnumList.UUIDtype;
+import moe.koseirin.nyanruaineo.utils.System.EnumList.UUIDtype;
 import moe.koseirin.nyanruaineo.utils.ErrUtils.ErrRes;
 import moe.koseirin.nyanruaineo.utils.SqlService.YggdrasilPlayerService;
 import moe.koseirin.nyanruaineo.utils.SqlService.YggdrasilService;

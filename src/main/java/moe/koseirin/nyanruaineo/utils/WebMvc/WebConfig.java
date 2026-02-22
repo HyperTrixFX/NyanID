@@ -5,8 +5,10 @@ package moe.koseirin.nyanruaineo.utils.WebMvc;
  * awa
  */
 
+import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.config.annotation.ApiVersionConfigurer;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -46,6 +48,14 @@ public class WebConfig implements WebMvcConfigurer {
                 .addPathPatterns("/api/zako/v1/user/2fa/open2fa")
                 .addPathPatterns("/api/zako/v1/user/2fa/close2fa")
                 .addPathPatterns("/api/yggdrasil/textures/**");
+    }
+
+    @Override
+    public void configureApiVersioning(@NonNull ApiVersionConfigurer configurer) {
+        //configurer.useRequestHeader("API-Version");
+        // configurer.useQueryParameter("version");
+        // configurer.usePathPattern("/api/{version}");
+        // configurer.useMediaType("application/vnd.api.v1+json");
     }
 
 }

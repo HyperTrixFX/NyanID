@@ -13,29 +13,30 @@ import moe.koseirin.nyanruaineo.NyanIdApplication;
 import moe.koseirin.nyanruaineo.dto.LoginDTO;
 import moe.koseirin.nyanruaineo.dto.RegisterConfirmDTO;
 import moe.koseirin.nyanruaineo.dto.RegisterDTO;
+import moe.koseirin.nyanruaineo.services.MicrosoftLogin;
 import moe.koseirin.nyanruaineo.services.UserServices;
 import moe.koseirin.nyanruaineo.utils.EmailHelper.EmailService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.io.IOException;
 
 @RestController
 @RequestMapping("api/zako/v1")
 public class UserAuthController {
 
-    private UserServices userServices;
-    private EmailService emailService;
+    private final UserServices userServices;
+    private final EmailService emailService;
+    private final MicrosoftLogin microsoftLogin;
 
-
-    public UserAuthController(UserServices userServices, EmailService emailService) {
+    public UserAuthController(UserServices userServices, EmailService emailService, MicrosoftLogin microsoftLogin) {
         this.userServices = userServices;
         this.emailService = emailService;
+        this.microsoftLogin = microsoftLogin;
     }
 
 
-    @PostMapping("/register")
+    @PostMapping(value = "/register")
     public ResponseEntity<?> register(@RequestBody RegisterDTO registerDTO, HttpServletRequest request, HttpServletResponse response) {
       return userServices.register(registerDTO.getUsername(),registerDTO.getPassword(), registerDTO.getEmail(), registerDTO.getIdempotencyKey(),request,response);
     }
@@ -55,7 +56,15 @@ public class UserAuthController {
         return userServices.l2fa(request, loginDTO.getVerifyCode(), loginDTO.getToken());
     }
 
+    @PostMapping("microsoft/newlogin")
+    public ResponseEntity<?> Login(HttpServletResponse response, HttpServletRequest request, @RequestParam(value = "code",required = true) String code, @RequestParam(value = "id_token",required = false) String id_token, @RequestParam(value = "state",required = true) String state) throws IOException {
+        return microsoftLogin.MicrosoftLogin(response,request,code,id_token,state);
+    }
 
+    @GetMapping("microsoft/newlogin")
+    public ResponseEntity<?> redirect(HttpServletResponse response, HttpServletRequest request) throws IOException {
+        return microsoftLogin. redirect(response,request);
+    }
 
 
 

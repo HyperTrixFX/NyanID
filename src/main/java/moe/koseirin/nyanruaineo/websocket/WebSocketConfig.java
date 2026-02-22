@@ -5,29 +5,30 @@ package moe.koseirin.nyanruaineo.websocket;
  * awa
  */
 
-import org.springframework.beans.BeansException;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.ApplicationContextAware;
+import moe.koseirin.nyanruaineo.websocket.Handler.BungeeWebSocketHandler;
+import moe.koseirin.nyanruaineo.websocket.Interceptor.BungeeAuthHandshakeInterceptor;
+import org.jspecify.annotations.NonNull;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.socket.config.annotation.EnableWebSocket;
+import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
+import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
 
 @Configuration
-@ConditionalOnWebApplication
-public class WebSocketConfig implements ApplicationContextAware {
+@EnableWebSocket
+public class WebSocketConfig implements WebSocketConfigurer {
 
-    private static ApplicationContext context;
+    private final BungeeWebSocketHandler bungeeWebSocketHandler;
+
+    public WebSocketConfig(BungeeWebSocketHandler bungeeWebSocketHandler) {
+        this.bungeeWebSocketHandler = bungeeWebSocketHandler;
+    }
 
     @Override
-    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-        context = applicationContext;
+    public void registerWebSocketHandlers(@NonNull WebSocketHandlerRegistry registry) {
+        registry.addHandler(bungeeWebSocketHandler, "/api/zako/v3/websocket/bungee")
+                .addInterceptors(new BungeeAuthHandshakeInterceptor())
+                .setAllowedOrigins("*");
     }
 
-    public static <T> T getBean(Class<T> beanClass) {
-        return context.getBean(beanClass);
-    }
 
-//    @Bean
-//    public ServerEndpointExporter serverEndpointExporter() throws InstantiationException, IllegalAccessException {
-//        return new ServerEndpointExporter().getClass().newInstance();
-//    }
 }
