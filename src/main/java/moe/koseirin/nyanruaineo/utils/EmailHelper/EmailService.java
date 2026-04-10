@@ -6,7 +6,7 @@ package moe.koseirin.nyanruaineo.utils.EmailHelper;
  */
 
 import jakarta.mail.internet.MimeMessage;
-import moe.koseirin.nyanruaineo.utils.EnumList.EmailBody;
+import moe.koseirin.nyanruaineo.utils.System.EnumList.EmailBody;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -14,7 +14,6 @@ import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.mail.javamail.MimeMessagePreparator;
 import org.springframework.stereotype.Service;
 import org.springframework.util.FileCopyUtils;
-import org.springframework.web.util.HtmlUtils;
 
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;

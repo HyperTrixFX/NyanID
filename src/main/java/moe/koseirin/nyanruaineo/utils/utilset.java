@@ -10,7 +10,7 @@ package moe.koseirin.nyanruaineo.utils;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
-import moe.koseirin.nyanruaineo.utils.EnumList.UUIDtype;
+import moe.koseirin.nyanruaineo.utils.System.EnumList.UUIDtype;
 import moe.koseirin.nyanruaineo.utils.WebMvc.StrictIpResolver;
 import org.apache.commons.codec.binary.Base32;
 import org.springframework.stereotype.Component;
@@ -29,6 +29,7 @@ import java.nio.file.Path;
 import java.security.*;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
+import java.sql.Blob;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Base64;
@@ -120,6 +121,12 @@ public class utilset {
             Logger.getLogger("NyanID").warning("Encrypt error: " + e);
             return "false";
         }
+    }
+
+    public byte[] rsaDecrypt(byte[] encryptedData, PrivateKey privateKey) throws Exception {
+        Cipher cipher = Cipher.getInstance("RSA");
+        cipher.init(Cipher.DECRYPT_MODE, privateKey);
+        return cipher.doFinal(encryptedData);
     }
 
     public String GetSessionUUID(HttpServletRequest request,String uid) {
@@ -284,7 +291,7 @@ public class utilset {
     /**
      * @param length 字符串长度
      */
-    public static String RandomString(int length) {
+    public  String RandomString(int length) {
         String characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
         StringBuilder flt = new StringBuilder();
         Random random = new Random();
@@ -365,6 +372,8 @@ public class utilset {
             }
         }
     }
+
+
 }
 
 
