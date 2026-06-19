@@ -73,7 +73,17 @@ public class Sessionserver {
             if (json.containsKey("accessToken") && json.containsKey("selectedProfile")){
                 if (json.containsKey("serverId")) {
                     String Token = json.getString("accessToken");
-                    Logger.getLogger(this.getClass().getName()).log(Level.WARNING, "Token: " + Token);
+
+
+//
+//
+//
+//
+//                    Logger.getLogger(this.getClass().getName()).log(Level.WARNING, "Token: " + Token);
+//
+//
+
+
                     String accessToken = utilset.decrypt(Token, privateKey);
                     String selectedProfile = json.getString("selectedProfile");
                     String serverId = json.getString("serverId");

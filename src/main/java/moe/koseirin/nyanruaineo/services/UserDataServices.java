@@ -164,24 +164,23 @@ public class UserDataServices {
         if (avatar == null) {
             return respond.respond(MediaType.APPLICATION_JSON,403, "message","RequestParam avatar is NULL  MiaoWu~","timestamp", LocalDateTime.now());
         }
-        MultipartFile avatarFile = avatar;
-        if (request.getContentType() == null || !request.getContentType().matches("multipart/form-data")) {
+        if (request.getContentType() == null || !request.getContentType().matches("multipart/form-data.*")) {
             return respond.respond(MediaType.APPLICATION_JSON,403, "message","RequestParam avatar is NULL  MiaoWu~","timestamp", LocalDateTime.now());
         }
-        if (avatarFile.getContentType() == null) {
+        if (avatar.getContentType() == null) {
             return respond.respond(MediaType.APPLICATION_JSON,403, "message","RequestParam avatar is NULL  MiaoWu~","timestamp", LocalDateTime.now());
         }
 
-        String contentType = avatarFile.getContentType();
+        String contentType = avatar.getContentType();
         if (!contentType.matches("image/.*")) {
             return respond.respond(MediaType.APPLICATION_JSON,403, "message","RequestParam avatar is not image MiaoWu~","timestamp", LocalDateTime.now());
         }
 
-        if (avatarFile.getSize() >= 1024 * 1024 * 10) {
+        if (avatar.getSize() >= 1024 * 1024 * 10) {
             return respond.respond(MediaType.APPLICATION_JSON,403, "message","RequestParam avatar is not image MiaoWu~","timestamp", LocalDateTime.now());
         }
         Accounts accounts = GetUser(request);
-        SaveUserAvatar(accounts.getUid(), avatarFile);
+        SaveUserAvatar(accounts.getUid(), avatar);
         return respond.respond(MediaType.APPLICATION_JSON,200, "message","Setting avatar success MiaoWu~","timestamp", LocalDateTime.now());
 
     }

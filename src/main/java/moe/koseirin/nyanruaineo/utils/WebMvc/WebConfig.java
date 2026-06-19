@@ -50,13 +50,13 @@ public class WebConfig implements WebMvcConfigurer {
                 .addPathPatterns("/api/yggdrasil/textures/**");
     }
 
-    @Override
-    public void configureApiVersioning(@NonNull ApiVersionConfigurer configurer) {
-        //configurer.useRequestHeader("API-Version");
-        // configurer.useQueryParameter("version");
-        // configurer.usePathPattern("/api/{version}");
-        // configurer.useMediaType("application/vnd.api.v1+json");
-    }
+//    @Override
+//    public void configureApiVersioning(@NonNull ApiVersionConfigurer configurer) {
+//        configurer.useRequestHeader("API-Version");
+//         configurer.useQueryParameter("version");
+//         configurer.usePathPattern("/api/{version}");
+//         configurer.useMediaType("application/vnd.api.v1+json");
+//    }
 
 }
 

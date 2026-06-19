@@ -84,7 +84,9 @@ public class Textures {
                 inputStream.close();
                 Path SKINTexture = Paths.get("Data/YggdrasilTexture/hash-" + hash );
                 File file = new File(SKINTexture.toString());
-                Logger.getLogger(this.getClass().getName()).log(Level.INFO, "model: " + model);
+
+//                Logger.getLogger(this.getClass().getName()).log(Level.INFO, "model: " + model);
+
                 int type;
                 if (model != null){
                     type = switch ((String) model) {
