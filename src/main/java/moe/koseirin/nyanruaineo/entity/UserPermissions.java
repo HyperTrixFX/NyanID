@@ -1,12 +1,5 @@
 package moe.koseirin.nyanruaineo.entity;
 
-
-/*
- * @author KoseiRin_
- * awa
- */
-
-
 /*
  * @author KoseiRin_
  * awa

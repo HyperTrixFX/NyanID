@@ -12,7 +12,7 @@ package moe.koseirin.nyanruaineo.utils.SqlService.impl;
  * awa
  */
 
-import moe.koseirin.nyanruaineo.server.web.User.UserJson.BanUserListJson;
+import moe.koseirin.nyanruaineo.dto.BanUserListJson;
 import moe.koseirin.nyanruaineo.entity.BanUserList;
 import moe.koseirin.nyanruaineo.repository.BanUserRepository;
 import moe.koseirin.nyanruaineo.utils.SqlService.BanUserService;

@@ -5,11 +5,6 @@ package moe.koseirin.nyanruaineo.repository;
  * awa
  */
 
-/*
- * @author KoseiRin_
- * awa
- */
-
 import moe.koseirin.nyanruaineo.entity.BanUserList;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;

@@ -5,11 +5,6 @@ package moe.koseirin.nyanruaineo.entity;
  * awa
  */
 
-/*
- * @author KoseiRin_
- * awa
- */
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;

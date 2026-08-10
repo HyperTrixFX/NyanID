@@ -40,7 +40,6 @@ public class PacketRegistryConfig {
         minecraftPacketRegistry.register(ConnectionState.LOGIN, 0x00, LoginStartPacket::new);
         // Forge 客户端在登录阶段发送 Mod 列表 (0xFC)
         minecraftPacketRegistry.register(ConnectionState.LOGIN, 0xFC, () -> new ForgeModListPacket(false));
-        // 如果有其他登录包（如加密响应），可在此继续添加
 //        minecraftPacketRegistry.register(ConnectionState.LOGIN, 0x01, EncryptionResponsePacket::new);
     }
 }

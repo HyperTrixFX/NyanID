@@ -1,22 +1,15 @@
 package moe.koseirin.nyanruaineo.entity;
 
-
 /*
  * @author KoseiRin_
  * awa
  */
 
-
-/*
- * @author KoseiRin_
- * awa
- */
 
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
-//mongodb
 @Entity
 @Setter
 @Getter

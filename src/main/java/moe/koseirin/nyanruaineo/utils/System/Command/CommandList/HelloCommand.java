@@ -12,10 +12,15 @@ package moe.koseirin.nyanruaineo.utils.System.Command.CommandList;
 
 import moe.koseirin.nyanruaineo.utils.System.Command.Command;
 
-import java.util.Arrays;
+import org.springframework.stereotype.Component;
 
 
+@Component
 public class HelloCommand implements Command {
+
+//
+//    @Value("${permissions.admin}")
+//    private String[] strings;
 
     @Override
     public String getName() {
@@ -29,6 +34,6 @@ public class HelloCommand implements Command {
 
     @Override
     public void execute(String[] args) {
-        System.out.println("Hello, World!" + Arrays.toString(args));
+//        System.out.println("Hello, World!" + strings[1]);
     }
 }

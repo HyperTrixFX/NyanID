@@ -10,7 +10,7 @@ package moe.koseirin.nyanruaineo.utils.SqlService.impl;
  * awa
  */
 
-import moe.koseirin.nyanruaineo.server.web.User.UserJson.UserDevicesJson;
+import moe.koseirin.nyanruaineo.dto.UserDevicesJson;
 import moe.koseirin.nyanruaineo.repository.UserDevicesRepository;
 import moe.koseirin.nyanruaineo.utils.SqlService.UserDevicesService;
 import moe.koseirin.nyanruaineo.entity.UserDevices;

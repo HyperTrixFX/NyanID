@@ -23,8 +23,8 @@ public class PublicUserInfoController {
 
 
     @GetMapping("userinfo/{uuid}")
-    public ResponseEntity<?> getUserInfo(@PathVariable("uuid") String uuid, HttpServletRequest request) {
-            return userInfoServices.getUserInfo(uuid,request);
+    public ResponseEntity<?> getUserInfo(@PathVariable String uuid, HttpServletRequest request) {
+            return userInfoServices.getPublicUserInfo(uuid,request);
     }
 
     @PostMapping("searchuser")

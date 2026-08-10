@@ -21,6 +21,7 @@ import moe.koseirin.nyanruaineo.network.Minecraft.network.codec.PacketDecoder;
 import moe.koseirin.nyanruaineo.network.Minecraft.network.codec.PacketEncoder;
 import moe.koseirin.nyanruaineo.network.Minecraft.network.handler.MinecraftProtocolHandler;
 import moe.koseirin.nyanruaineo.network.Minecraft.network.packet.MinecraftPacketRegistry;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 @Slf4j
@@ -32,6 +33,9 @@ public class Proxy {
     private final MinecraftPacketRegistry minecraftPacketRegistry;
 
     private final MinecraftProtocolHandler protocolHandler;
+
+    @Value("${NyanidSetting.EnableProxy}")
+    private boolean ISEnableProxy;
 
     private EventLoopGroup bossGroup;
     private EventLoopGroup workerGroup;
@@ -45,6 +49,7 @@ public class Proxy {
 
     @PostConstruct
     public void start() throws InterruptedException {
+        if (ISEnableProxy){
         int port = properties.getPort();
         bossGroup = new NioEventLoopGroup(1);
         workerGroup = new NioEventLoopGroup();
@@ -65,6 +70,7 @@ public class Proxy {
 
         channelFuture = b.bind(port).sync();
         log.info("Minecraft proxy started on port {}", port);
+        }else {log.info("Minecraft proxy is disable");}
     }
 
     @PreDestroy

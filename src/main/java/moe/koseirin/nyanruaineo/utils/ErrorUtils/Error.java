@@ -1,4 +1,4 @@
-package moe.koseirin.nyanruaineo.utils.ErrUtils;
+package moe.koseirin.nyanruaineo.utils.ErrorUtils;
 
 /*
  * @author KoseiRin_
@@ -11,10 +11,9 @@ import lombok.Setter;
 import java.time.LocalDateTime;
 @Getter
 @Setter
-public class SJson {
-    private int status;
-    private  String message;
+public class Error {
+    private String error;
+    private String message;
     private LocalDateTime timestamp;
-
 
 }

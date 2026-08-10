@@ -1,10 +1,13 @@
-package moe.koseirin.nyanruaineo.utils.ErrUtils;
+package moe.koseirin.nyanruaineo.utils.ErrorUtils;
 
 /*
  * @author KoseiRin_
  * awa
  */
 
+import lombok.Getter;
+
+@Getter
 public enum ErrorCode {
     IllegalClient(403,"Illegal Client Request"),
     IllegalRequest(403,"Illegal Request"),
@@ -25,11 +28,4 @@ public enum ErrorCode {
         this.message = message;
     }
 
-    public int getCode() {
-        return code;
-    }
-
-    public String getMessage() {
-        return message;
-    }
 }

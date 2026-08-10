@@ -1,0 +1,14 @@
+permissions:
+  default:
+    - bungeecord.command.server
+    - bungeecord.command.list
+  admin:
+    - bungeecord.command.alert
+    - bungeecord.command.alertraw
+    - bungeecord.command.end
+    - bungeecord.command.ip
+    - bungeecord.command.reload
+    - bungeecord.command.kick
+    - bungeecord.command.send
+    - bungeecord.command.find
+    - bungeecord.command.perms

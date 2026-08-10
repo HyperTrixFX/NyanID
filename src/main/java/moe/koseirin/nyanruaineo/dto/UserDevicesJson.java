@@ -1,4 +1,4 @@
-package moe.koseirin.nyanruaineo.server.web.User.UserJson;
+package moe.koseirin.nyanruaineo.dto;
 
 /*
  * @author KoseiRin_

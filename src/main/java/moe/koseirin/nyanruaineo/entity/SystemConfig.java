@@ -1,5 +1,6 @@
 package moe.koseirin.nyanruaineo.entity;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import lombok.AllArgsConstructor;
@@ -20,6 +21,7 @@ public class SystemConfig {
     @Id
     private String configKey;
 
+    @Column(columnDefinition = "varchar(800)")
     private String configValue;
 
 

@@ -35,9 +35,12 @@ import java.util.logging.Logger;
     @EnableAsync
     @EnableJpaRepositories(basePackages = "moe.koseirin.nyanruaineo.repository")
     @EnableRedisRepositories(basePackages = "moe.koseirin.nyanruaineo.utils.RedisUtils")
+//    @PropertySource(value = {
+//            "classpath:Permissions.yml",
+//    }, encoding = "utf-8")
     public class NyanIdApplication {
-    public static  Path configPath = Paths.get("config");
-    public static  Path DataPath = Paths.get("Data");
+    public static Path configPath = Paths.get("config");
+    public static Path DataPath = Paths.get("Data");
     public static Path UserAvatar = Paths.get("Data/UserAvatar");
     public static Path GIFAvatar = Paths.get("Data/GIFAvatar");
     public static Path UserDataPath = Paths.get("Data/UserData");
@@ -72,7 +75,6 @@ import java.util.logging.Logger;
     private HashMap <Class<?>,Class> Clazz = new HashMap<>();
 
     public static void main(String[] args) throws Exception {
-        Logger.getLogger("NyanID").info("[NyanID-UserServer] ["+ LocalDateTime.now() +"] ConfigPath: /config");
         if (!Files.exists(configPath) || !Files.exists(DataPath) || !Files.exists(UserAvatar) || !Files.exists(UserDataPath) || !Files.exists(PluginsPath)|| !Files.exists(GIFAvatar)|| !Files.exists(YggdrasilTexture)) {
             Files.createDirectories(configPath);
             Files.createDirectories(DataPath);
@@ -83,20 +85,26 @@ import java.util.logging.Logger;
             Files.createDirectories(YggdrasilTexture);
         }else {
             Resource resource = new ClassPathResource("application.cfg");
+            Resource PermissionsFile = new ClassPathResource("Permissions.yml");
             Path targetPath = configPath.resolve(Objects.requireNonNull(resource.getFilename().replace("cfg","yml")));
+            Path targetPath1 = configPath.resolve(Objects.requireNonNull(PermissionsFile.getFilename()));
             if (!Files.exists(targetPath)) {
                 Files.copy(resource.getInputStream(), targetPath);
                 Logger.getLogger("NyanID").info("[NyanID-UserServer] ["+ LocalDateTime.now() +"] : 配置文件已复制到config文件夹,请修改配置文件再运行喵~");
-                Logger.getLogger("NyanID").info("[NyanID-UserServer] ["+ LocalDateTime.now() +"] : Code By TakanashiHoshino");
-                Logger.getLogger("NyanID").info("[NyanID-UserServer] ["+ LocalDateTime.now() +"] : 爱来自ABYDOS喵~");
-            } else if (Files.exists(targetPath)) {
+
+            }
+            if (!Files.exists(targetPath1)){
+                Files.copy(PermissionsFile.getInputStream(),targetPath1);
+                Logger.getLogger("NyanID").info("[NyanID-UserServer] ["+ LocalDateTime.now() +"] : Permissions文件已复制到config文件夹喵~");
+
+            }
                 wordBs.enableWordCheck(true);
                 wordBs.enableIpv4Check(true);
                 wordBs.enableEmailCheck(true);
                 wordBs.enableUrlCheck(true);
                 wordBs.init();
                 SpringApplication.run(NyanIdApplication.class, args);
-            }
+
         }
     }
 

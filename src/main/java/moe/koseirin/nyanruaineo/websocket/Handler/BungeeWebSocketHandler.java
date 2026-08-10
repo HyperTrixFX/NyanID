@@ -9,6 +9,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import lombok.extern.slf4j.Slf4j;
 import moe.koseirin.nyanruaineo.entity.Accounts;
+import moe.koseirin.nyanruaineo.eventbus.EventBus;
+import moe.koseirin.nyanruaineo.eventbus.Interface.EventHeader;
 import moe.koseirin.nyanruaineo.network.Interface.Packet;
 import moe.koseirin.nyanruaineo.network.Packet.Client.BindAccountPacket;
 import moe.koseirin.nyanruaineo.network.Packet.Client.CheckBindPacket;
@@ -24,6 +26,7 @@ import moe.koseirin.nyanruaineo.network.utils.SM4Util;
 import moe.koseirin.nyanruaineo.repository.AccountsRepository;
 import moe.koseirin.nyanruaineo.repository.ServerListRepository;
 import moe.koseirin.nyanruaineo.utils.RedisUtils.RedisService;
+import moe.koseirin.nyanruaineo.websocket.event.PacketReceivedEvent;
 import org.jspecify.annotations.NonNull;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.BinaryMessage;
@@ -48,14 +51,16 @@ public class BungeeWebSocketHandler extends BinaryWebSocketHandler {
     private final AccountsRepository accountsRepository;
     private final KeyManager KeyManager;
     private final PacketRegistry packetRegistry;
+    private final EventBus eventBus;
     private final Map<String, WebSocketSession> authenticatedSessions = new ConcurrentHashMap<>();
 
-    public BungeeWebSocketHandler(ServerListRepository serverListRepository, RedisService redisService, AccountsRepository accountsRepository, KeyManager KeyManager, PacketRegistry packetRegistry) {
+    public BungeeWebSocketHandler(ServerListRepository serverListRepository, RedisService redisService, AccountsRepository accountsRepository, KeyManager KeyManager, PacketRegistry packetRegistry, EventBus eventBus) {
         this.serverListRepository = serverListRepository;
         this.redisService = redisService;
         this.accountsRepository = accountsRepository;
         this.KeyManager = KeyManager;
         this.packetRegistry = packetRegistry;
+        this.eventBus = eventBus;
     }
 
     @Override
@@ -83,6 +88,7 @@ public class BungeeWebSocketHandler extends BinaryWebSocketHandler {
     }
 
     @Override
+    @EventHeader
     protected void handleBinaryMessage(WebSocketSession session, @NonNull BinaryMessage message) throws Exception {
         if (!authenticatedSessions.containsKey(session.getId())) {
             log.warn("未认证的会话尝试发送消息，关闭连接喵，SessionId: {}", session.getId());
@@ -128,7 +134,7 @@ public class BungeeWebSocketHandler extends BinaryWebSocketHandler {
             int packetId = PacketCodecUtil.readVarInt(buf);
             Packet packet = packetRegistry.createPacket(packetId);
             packet.decode(buf);
-            handlePacket(session, packet);
+            eventBus.postAsync(new PacketReceivedEvent(session,packet));
         } catch (Exception e) {
             log.error("处理数据包异常喵，SessionId: {}", session.getId(), e);
             session.close(CloseStatus.PROTOCOL_ERROR);
@@ -137,48 +143,7 @@ public class BungeeWebSocketHandler extends BinaryWebSocketHandler {
         }
     }
 
-    private void handlePacket(WebSocketSession session, Packet packet) throws IOException {
-        if (packet instanceof HeartbeatPacket) {
-            sendPacket(session, new HeartbeatResponsePacket());
-        }
-        else if (packet instanceof UpdateOnlinePacket p) {
-            try {
-                redisService.setValueWithExpiration("Online-" + p.getServername(), p.getOnline(), 30, TimeUnit.SECONDS);
-                sendPacket(session, new UpdateOnlineResponsePacket(true));
-            } catch (Exception e) {
-                log.error("更新在线人数失败喵", e);
-                sendPacket(session, new UpdateOnlineResponsePacket(false));
-            }
-        }
-        else if (packet instanceof BindAccountPacket p) {
-            try {
-                redisService.setValueWithExpiration(p.getCode(), p.getUuid(), 180, TimeUnit.SECONDS);
-                sendPacket(session, new UpdateOnlineResponsePacket(true));
-            } catch (Exception e) {
-                log.error("绑定账号失败喵", e);
-                sendPacket(session, new UpdateOnlineResponsePacket(false));
-            }
-        }
-        else if (packet instanceof CheckBindPacket p) {
-            try {
-                Accounts accounts = accountsRepository.GetUser(p.getUuid());
-                if (accounts == null) {
-                    sendPacket(session, new CheckBindResponsePacket(false, null, null, null));
-                } else {
-                    sendPacket(session, new CheckBindResponsePacket(true, accounts.getBind(), accounts.getUid(), accounts.getUsername()));
-                }
-            } catch (Exception e) {
-                log.error("检查绑定失败喵", e);
-                session.close(CloseStatus.PROTOCOL_ERROR);
-            }
-        }
-        else {
-            log.error("未知的包类型喵: {}", packet.getClass().getSimpleName());
-            session.close(new CloseStatus(4500, "10001"));
-        }
-    }
-
-    private void sendPacket(WebSocketSession session, Packet packet) throws IOException {
+    public void sendPacket(WebSocketSession session, Packet packet) throws IOException {
         ByteBuf buf = Unpooled.buffer();
         try {
             PacketCodecUtil.writeVarInt(buf, packet.packetId());
@@ -229,4 +194,6 @@ public class BungeeWebSocketHandler extends BinaryWebSocketHandler {
         authenticatedSessions.remove(session.getId());
         log.warn("Bungee连接断开喵，SessionId: {}, 状态: {}", session.getId(), status);
     }
+
+
 }

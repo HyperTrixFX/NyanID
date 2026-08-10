@@ -5,11 +5,6 @@ package moe.koseirin.nyanruaineo.repository;
  * awa
  */
 
-/*
- * @author KoseiRin_
- * awa
- */
-
 import jakarta.transaction.Transactional;
 import moe.koseirin.nyanruaineo.entity.Accounts;
 import org.springframework.data.domain.Page;

@@ -74,7 +74,7 @@ public class StrictIpResolver {
             }
         }
 
-        return validIps.get(0);
+        return validIps.getFirst();
     }
 
     private String checkOtherHeadersStrictly(HttpServletRequest request) {
@@ -170,11 +170,7 @@ public class StrictIpResolver {
         }
 
         String xff = request.getHeader("X-Forwarded-For");
-        if (xff != null && (xff.contains("unknown") || xff.contains("undefined"))) {
-            return true;
-        }
-
-        return false;
+        return xff != null && (xff.contains("unknown") || xff.contains("undefined"));
     }
 
     private String sanitizeIp(String ip) {
