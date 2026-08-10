@@ -5,11 +5,6 @@ package moe.koseirin.nyanruaineo.repository;
  * awa
  */
 
-/*
- * @author KoseiRin_
- * awa
- */
-
 import moe.koseirin.nyanruaineo.entity.UserOAuth;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;

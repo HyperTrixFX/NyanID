@@ -14,7 +14,6 @@ import com.github.houbb.sensitive.word.support.resultcondition.WordResultConditi
 import com.github.houbb.sensitive.word.support.tag.WordTags;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.context.annotation.PropertySource;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;

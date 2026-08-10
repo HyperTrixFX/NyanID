@@ -24,7 +24,6 @@ public class CharacterInformationJson {
 
     public CharacterInformationJson() {}
 
-    // 带参构造器
     public CharacterInformationJson(String id, String name, List<Property> properties) {
         this.id = id;
         this.name = name;

@@ -10,7 +10,7 @@ import io.netty.buffer.ByteBuf;
 public interface Packet {
     // pid
     int packetId();
-    // 将包数据写入 ByteBuf
+    // ByteBuf
     void encode(ByteBuf buf);
     void decode(ByteBuf buf);
 

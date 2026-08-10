@@ -63,7 +63,7 @@ public class EventBus implements EventBusInterface {
 
             Class<?>[] paramTypes = method.getParameterTypes();
             if (paramTypes.length != 1) {
-                log.warn("Method {} in {} has @Subscribe but does not have exactly one parameter, ignored",
+                log.warn("Method {} in {} has @EventHeader but does not have exactly one parameter, ignored",
                         method.getName(), listener.getClass().getName());
                 continue;
             }

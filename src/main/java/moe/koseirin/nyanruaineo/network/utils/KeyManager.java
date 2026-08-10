@@ -29,6 +29,8 @@ public class KeyManager {
         try {
             if (base64Key == null) {
                 log.error("SM4 key not configured in database (key: " + SM4_KEY_CONFIG_KEY + ")");
+                cacheService.addConfig("sm4Key","AQIDBAUGBwgJCgsMDQ4PEA==");
+                cacheService.loadConfigs();
             }
             return Base64.getDecoder().decode(base64Key);
         }catch (NullPointerException e){

@@ -1,17 +1,16 @@
 package moe.koseirin.nyanruaineo.server.V1Controller;
 
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import moe.koseirin.nyanruaineo.dto.DeleteDevicesDTO;
 import moe.koseirin.nyanruaineo.services.UserSecurityServices;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 /*
  * @author KoseiRin_
  * awa
  */
+
 @RestController
 @RequestMapping("api/zako/v1")
 public class UserSecurityController {
@@ -34,8 +33,15 @@ public class UserSecurityController {
         return userSecurityServices.Close2FA(request);
     }
 
+    @GetMapping("user/devices")
+    public ResponseEntity<?> GetDevices(HttpServletRequest request) {
+        return userSecurityServices.GetDevices(request);
+    }
 
-
+    @DeleteMapping("user/devices")
+    public ResponseEntity<?> DeleteDevices(@RequestBody DeleteDevicesDTO deleteDevicesDTO) {
+        return userSecurityServices.DeleteDevices(deleteDevicesDTO.getValue());
+    }
 
 
 

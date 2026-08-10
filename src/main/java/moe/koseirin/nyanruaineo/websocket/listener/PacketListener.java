@@ -12,6 +12,7 @@ import moe.koseirin.nyanruaineo.network.Packet.Client.CheckBindPacket;
 import moe.koseirin.nyanruaineo.network.Packet.Client.HeartbeatResponsePacket;
 import moe.koseirin.nyanruaineo.network.Packet.Client.UpdateOnlinePacket;
 import moe.koseirin.nyanruaineo.network.Packet.Server.CheckBindResponsePacket;
+import moe.koseirin.nyanruaineo.network.Packet.Server.ErrorPacket;
 import moe.koseirin.nyanruaineo.network.Packet.Server.HeartbeatPacket;
 import moe.koseirin.nyanruaineo.network.Packet.Server.UpdateOnlineResponsePacket;
 import moe.koseirin.nyanruaineo.network.utils.KeyManager;
@@ -63,11 +64,19 @@ public class PacketListener {
 
             case BindAccountPacket p -> {
                 try {
+                    if (p.getCode() == null){
+                        log.error("绑定账号失败喵");
+                        sendPacket(session, new ErrorPacket(false));
+                    }
+                    if (p.getUuid() == null){
+                        log.error("绑定账号失败喵");
+                        sendPacket(session, new ErrorPacket(false));
+                    }
                     redisService.setValueWithExpiration(p.getCode(), p.getUuid(), 180, TimeUnit.SECONDS);
-                    sendPacket(session, new UpdateOnlineResponsePacket(true));
+                    sendPacket(session, new HeartbeatResponsePacket());
                 } catch (Exception e) {
                     log.error("绑定账号失败喵", e);
-                    sendPacket(session, new UpdateOnlineResponsePacket(false));
+                    sendPacket(session, new ErrorPacket(false));
                 }
             }
 

@@ -1,18 +1,10 @@
 package moe.koseirin.nyanruaineo.entity;
 
-
-
 /*
  * @author KoseiRin_
  * awa
  */
 
-
-
-/*
- * @author KoseiRin_
- * awa
- */
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -43,7 +35,7 @@ public class BanUserList{
     private boolean isActive;
 
     @Column(nullable = false)
-    private int Type;  //1限制修改昵称//2限制从Oauth登录//3限制修改头像及头图//4限制上传配置文件//5禁止登录游戏(可登录网站)//6死ban
+    private int Type;  //1限制修改昵称//2限制从Oauth登录//3限制修改头像及头图//4门户锁//5禁止登录游戏(可登录网站)//6死ban//-1安全警告
 
     @Column(nullable = false)
     private LocalDateTime BanTime;

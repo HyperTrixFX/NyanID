@@ -10,6 +10,7 @@ import java.io.Serializable;
  * @author KoseiRin_
  * awa
  */
+
 @Repository
 public interface ApplicationRepository extends JpaRepository<OAuthApp,String>, Serializable {
 }

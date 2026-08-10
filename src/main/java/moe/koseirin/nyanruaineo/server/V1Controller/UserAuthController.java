@@ -6,10 +6,8 @@ package moe.koseirin.nyanruaineo.server.V1Controller;
  * awa
  */
 
-import com.alibaba.fastjson2.JSONObject;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import moe.koseirin.nyanruaineo.NyanIdApplication;
 import moe.koseirin.nyanruaineo.dto.LoginDTO;
 import moe.koseirin.nyanruaineo.dto.RegisterConfirmDTO;
 import moe.koseirin.nyanruaineo.dto.RegisterDTO;
@@ -68,15 +66,15 @@ public class UserAuthController {
 
 
 
-    @PostMapping("a")
-    public String a(@RequestBody(required = false) JSONObject data) {
+//    @PostMapping("a")
+//    public String a(@RequestBody(required = false) JSONObject data) {
 //        System.out.println(TurnstileService.validateToken("",TurnstileSecretKey,"").isSuccess());
 //        emailService.sendmail("qqqqqqh6@163.com","qqqqqqh6@163.com", EmailBody.RegisterBody.getBody().replace("${link}","https://baidu.com"));
-        String E = data.getString("word");
-        if (NyanIdApplication.wordBs.contains(E)) {
-            E = NyanIdApplication.wordBs.replace(E);
-        }
-        return E;
-    }
+//        String E = data.getString("word");
+//        if (NyanIdApplication.wordBs.contains(E)) {
+//            E = NyanIdApplication.wordBs.replace(E);
+//        }
+//        return E;
+//    }
 
 }

@@ -16,16 +16,20 @@ import moe.koseirin.nyanruaineo.server.YggdrasilServer.YggdrasilServerJson.Yggdr
 import moe.koseirin.nyanruaineo.repository.AccountsRepository;
 import moe.koseirin.nyanruaineo.repository.UserDevicesRepository;
 import moe.koseirin.nyanruaineo.repository.YggdrasilRepository;
+import moe.koseirin.nyanruaineo.utils.Respond;
 import moe.koseirin.nyanruaineo.utils.System.EnumList.UUIDtype;
-import moe.koseirin.nyanruaineo.utils.ErrUtils.ErrRes;
 import moe.koseirin.nyanruaineo.utils.SqlService.YggdrasilPlayerService;
 import moe.koseirin.nyanruaineo.utils.SqlService.YggdrasilService;
 import moe.koseirin.nyanruaineo.utils.utilset;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.time.LocalDateTime;
 
 
 @RestController
@@ -65,14 +69,16 @@ public class YggdrasilServer {
     private final YggdrasilService yggdrasilService;
     private final YggdrasilPlayerService yggdrasilPlayerService;
     private final utilset utilset;
+    private final Respond respond;
 
-    public YggdrasilServer(UserDevicesRepository userDevicesRepository, YggdrasilRepository yggdrasilRepository, AccountsRepository accountsRepository, YggdrasilService yggdrasilService, YggdrasilPlayerService yggdrasilPlayerService, utilset utilset) {
+    public YggdrasilServer(UserDevicesRepository userDevicesRepository, YggdrasilRepository yggdrasilRepository, AccountsRepository accountsRepository, YggdrasilService yggdrasilService, YggdrasilPlayerService yggdrasilPlayerService, utilset utilset, Respond respond) {
         this.userDevicesRepository = userDevicesRepository;
         this.yggdrasilRepository = yggdrasilRepository;
         this.accountsRepository = accountsRepository;
         this.yggdrasilService = yggdrasilService;
         this.yggdrasilPlayerService = yggdrasilPlayerService;
         this.utilset = utilset;
+        this.respond = respond;
     }
 
     @GetMapping({"","/"})
@@ -103,7 +109,7 @@ public class YggdrasilServer {
     }
 
     @PostMapping("open/account")
-    public  Object PostMethod(HttpServletResponse response, HttpServletRequest request){
+    public ResponseEntity<?> PostMethod(HttpServletResponse response, HttpServletRequest request){
         String Authorization = request.getHeader("Authorization");
         String rawToken = Authorization.replace("Bearer ", "").replace(" ", "");
         String Token = utilset.decrypt(rawToken, privateKey);
@@ -129,7 +135,8 @@ public class YggdrasilServer {
             response.setStatus(204);
             return  null;
         }else {
-            return  ErrRes.IllegalRequestException("RequestBody  is NULL  MiaoWu~",response);
+            return respond.respond(MediaType.APPLICATION_JSON,404, "message","RequestBody is NULL MiaoWu~","timestamp", LocalDateTime.now());
+
         }
     }
 }

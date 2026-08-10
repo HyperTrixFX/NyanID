@@ -27,6 +27,7 @@ import java.util.Objects;
  * @author KoseiRin_
  * awa
  */
+
 @Component
 public class UserDataImpl {
 

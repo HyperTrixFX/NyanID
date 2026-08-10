@@ -5,11 +5,6 @@ package moe.koseirin.nyanruaineo.repository;
  * awa
  */
 
-/*
- * @author KoseiRin_
- * awa
- */
-
 import moe.koseirin.nyanruaineo.entity.OAuthApp;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;

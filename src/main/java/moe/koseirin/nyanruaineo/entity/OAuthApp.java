@@ -1,16 +1,10 @@
 package moe.koseirin.nyanruaineo.entity;
 
-
 /*
  * @author KoseiRin_
  * awa
  */
 
-
-/*
- * @author KoseiRin_
- * awa
- */
 
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -19,7 +13,6 @@ import lombok.Setter;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
-//mongodb
 @Entity
 @Setter
 @Getter

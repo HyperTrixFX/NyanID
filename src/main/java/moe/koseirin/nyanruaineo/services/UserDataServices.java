@@ -3,7 +3,6 @@ package moe.koseirin.nyanruaineo.services;
 import com.alibaba.fastjson2.JSONObject;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import moe.koseirin.nyanruaineo.dto.UserDataDTO;
 import moe.koseirin.nyanruaineo.entity.Accounts;
 import moe.koseirin.nyanruaineo.entity.BanUserList;
 import moe.koseirin.nyanruaineo.entity.NyanIDuser;
@@ -13,7 +12,6 @@ import moe.koseirin.nyanruaineo.repository.NyanIDuserRepository;
 import moe.koseirin.nyanruaineo.repository.UserDevicesRepository;
 import moe.koseirin.nyanruaineo.services.impl.UserDataImpl;
 import moe.koseirin.nyanruaineo.utils.EmailHelper.EmailService;
-import moe.koseirin.nyanruaineo.utils.ErrUtils.SJson;
 import moe.koseirin.nyanruaineo.utils.RedisUtils.RedisService;
 import moe.koseirin.nyanruaineo.utils.Respond;
 import moe.koseirin.nyanruaineo.utils.WebMvc.StrictIpResolver;
@@ -23,7 +21,6 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
@@ -137,26 +134,20 @@ public class UserDataServices {
             return respond.respond(MediaType.APPLICATION_JSON,500, "message","未知登录绕过喵！！！","timestamp", LocalDateTime.now());
         }
         NyanIDuser nyanIDuser = nyanIDuserRepository.getUser(accounts.getUid());;
-        // 根据action执行不同操作
-        switch (action) {
-            case 0: // 设置昵称
-                return userDataImpl.handleUpdateNickname(nickname, nyanIDuser, accounts.getUid());
-
-            case 1: // 更改用户名
-                return userDataImpl.handleUpdateUsername(username, accounts, request);
-
-            case 2: // 更改简介
-                return userDataImpl.handleUpdateDescription(description, accounts.getUid());
-
-            case 3: // 绑定Minecraft账号
-                return userDataImpl.handleBindMinecraft(code,accounts);
-
-            case 4: // 切换头像模式
-                return userDataImpl.handleToggleAvatarMode(accounts.getUid());
-
-            default:
-                return respond.respond(MediaType.APPLICATION_JSON,400, "message","RequestBody action is invalid MiaoWu~","timestamp", LocalDateTime.now());
-        }
+        return switch (action) {
+            case 0 -> // 设置昵称
+                    userDataImpl.handleUpdateNickname(nickname, nyanIDuser, accounts.getUid());
+            case 1 -> // 更改用户名
+                    userDataImpl.handleUpdateUsername(username, accounts, request);
+            case 2 -> // 更改简介
+                    userDataImpl.handleUpdateDescription(description, accounts.getUid());
+            case 3 -> // 绑定Minecraft账号
+                    userDataImpl.handleBindMinecraft(code, accounts);
+            case 4 -> // 切换头像模式
+                    userDataImpl.handleToggleAvatarMode(accounts.getUid());
+            default ->
+                    respond.respond(MediaType.APPLICATION_JSON, 400, "message", "RequestBody action is invalid MiaoWu~", "timestamp", LocalDateTime.now());
+        };
     }
 
     @Transactional
@@ -185,15 +176,12 @@ public class UserDataServices {
 
     }
 
-
-
     private Accounts GetUser(HttpServletRequest request) {
         String Authorization = request.getHeader("Authorization");
         String rawToken = Authorization.replace("Bearer ", "").replace(" ", "");
         String Token = utilset.decrypt(rawToken, privateKey);
         String uid = userDevicesRepository.findUidByToken(Token);
-        Accounts accounts =  accountsRepository.GetUser(uid);
-        return accounts;
+        return accountsRepository.GetUser(uid);
     }
 
     private void SaveUserAvatar(String uid, MultipartFile avatar) throws IOException {
