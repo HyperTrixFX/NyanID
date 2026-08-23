@@ -5,11 +5,6 @@ package moe.koseirin.nyanruaineo.utils;
  * awa
  */
 
-/*
- * @author KoseiRin_
- * awa
- */
-
 import com.alibaba.fastjson2.JSONObject;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;

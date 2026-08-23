@@ -6,12 +6,6 @@ package moe.koseirin.nyanruaineo.websocket;
  */
 
 import jakarta.annotation.PostConstruct;
-import moe.koseirin.nyanruaineo.network.Minecraft.network.ConnectionState;
-import moe.koseirin.nyanruaineo.network.Minecraft.network.packet.forge.ForgeModListPacket;
-import moe.koseirin.nyanruaineo.network.Minecraft.network.packet.handshake.HandshakePacket;
-import moe.koseirin.nyanruaineo.network.Minecraft.network.packet.login.LoginStartPacket;
-import moe.koseirin.nyanruaineo.network.Minecraft.network.packet.status.PingRequestPacket;
-import moe.koseirin.nyanruaineo.network.Minecraft.network.packet.status.StatusRequestPacket;
 import moe.koseirin.nyanruaineo.network.Packet.Client.BindAccountPacket;
 import moe.koseirin.nyanruaineo.network.Packet.Client.CheckBindPacket;
 import moe.koseirin.nyanruaineo.network.Packet.Client.HeartbeatResponsePacket;

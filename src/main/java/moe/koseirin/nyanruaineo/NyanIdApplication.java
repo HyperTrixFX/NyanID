@@ -25,7 +25,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
-import java.util.HashMap;
 import java.util.Objects;
 import java.util.logging.Logger;
 
@@ -72,7 +71,7 @@ import java.util.logging.Logger;
             .charIgnore(SensitiveWordCharIgnores.defaults())
             .wordResultCondition(WordResultConditions.alwaysTrue())
             .init();
-    private HashMap <Class<?>,Class> Clazz = new HashMap<>();
+
 
     public static void main(String[] args) throws Exception {
         if (!Files.exists(configPath) || !Files.exists(DataPath) || !Files.exists(UserAvatar) || !Files.exists(UserDataPath) || !Files.exists(PluginsPath)|| !Files.exists(GIFAvatar)|| !Files.exists(YggdrasilTexture)) {
@@ -86,7 +85,7 @@ import java.util.logging.Logger;
         }else {
             Resource resource = new ClassPathResource("application.cfg");
             Resource PermissionsFile = new ClassPathResource("Permissions.yml");
-            Path targetPath = configPath.resolve(Objects.requireNonNull(resource.getFilename().replace("cfg","yml")));
+            Path targetPath = configPath.resolve(Objects.requireNonNull(Objects.requireNonNull(resource.getFilename()).replace("cfg","yml")));
             Path targetPath1 = configPath.resolve(Objects.requireNonNull(PermissionsFile.getFilename()));
             if (!Files.exists(targetPath)) {
                 Files.copy(resource.getInputStream(), targetPath);

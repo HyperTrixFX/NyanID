@@ -6,8 +6,10 @@ package moe.koseirin.nyanruaineo.network.Packet.Server;
  */
 
 import io.netty.buffer.ByteBuf;
+import lombok.Getter;
 import moe.koseirin.nyanruaineo.network.Interface.Packet;
 
+@Getter
 public class UpdateOnlineResponsePacket implements Packet {
     private boolean success;
 
@@ -32,5 +34,4 @@ public class UpdateOnlineResponsePacket implements Packet {
         this.success = buf.readBoolean();
     }
 
-    public boolean isSuccess() { return success; }
 }

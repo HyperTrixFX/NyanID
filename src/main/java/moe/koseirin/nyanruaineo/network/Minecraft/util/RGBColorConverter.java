@@ -36,7 +36,7 @@ public class RGBColorConverter {
     private static String convertToHexFormat(String text) {
         // 处理渐变
         Matcher gradientMatcher = GRADIENT_PATTERN.matcher(text);
-        StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder();
         while (gradientMatcher.find()) {
             String startColor = gradientMatcher.group(1);
             String endColor = gradientMatcher.group(2);
@@ -47,7 +47,7 @@ public class RGBColorConverter {
         text = sb.toString();
 
         Matcher rainbowMatcher = RAINBOW_PATTERN.matcher(text);
-        sb = new StringBuffer();
+        sb = new StringBuilder();
         while (rainbowMatcher.find()) {
             String content = rainbowMatcher.group(1);
             rainbowMatcher.appendReplacement(sb, content);
@@ -56,7 +56,7 @@ public class RGBColorConverter {
         text = sb.toString();
 
         Matcher hexMatcher = HEX_PATTERN.matcher(text);
-        sb = new StringBuffer();
+        sb = new StringBuilder();
         while (hexMatcher.find()) {
             String hex = hexMatcher.group(1);
             StringBuilder replacement = new StringBuilder("§x");

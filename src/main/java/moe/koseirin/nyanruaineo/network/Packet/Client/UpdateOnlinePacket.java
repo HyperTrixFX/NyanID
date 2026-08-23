@@ -6,9 +6,11 @@ package moe.koseirin.nyanruaineo.network.Packet.Client;
  */
 
 import io.netty.buffer.ByteBuf;
+import lombok.Getter;
 import moe.koseirin.nyanruaineo.network.Interface.Packet;
 import moe.koseirin.nyanruaineo.network.utils.PacketCodecUtil;
 
+@Getter
 public class UpdateOnlinePacket implements Packet {
     private String servername;
     private int online;
@@ -37,6 +39,4 @@ public class UpdateOnlinePacket implements Packet {
         this.online = PacketCodecUtil.readVarInt(buf);
     }
 
-    public String getServername() { return servername; }
-    public int getOnline() { return online; }
 }

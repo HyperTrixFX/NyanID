@@ -6,10 +6,13 @@ package moe.koseirin.nyanruaineo.network.Packet.Server;
  */
 
 import io.netty.buffer.ByteBuf;
+import lombok.Getter;
 import moe.koseirin.nyanruaineo.network.Interface.Packet;
 import moe.koseirin.nyanruaineo.network.utils.PacketCodecUtil;
 
+@Getter
 public class S01Packet implements Packet {
+    // getters
     private String uuid;
     private String nuid;
 
@@ -37,7 +40,4 @@ public class S01Packet implements Packet {
         this.nuid = PacketCodecUtil.readString(buf);
     }
 
-    // getters
-    public String getUuid() { return uuid; }
-    public String getNuid() { return nuid; }
 }

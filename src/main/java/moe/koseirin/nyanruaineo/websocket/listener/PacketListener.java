@@ -46,7 +46,7 @@ public class PacketListener {
 
 
     @EventHeader
-    public void handlePacket(PacketReceivedEvent event) throws IOException {
+    private void handlePacket(PacketReceivedEvent event) throws IOException {
         WebSocketSession session = event.session();
         switch (event.packet()) {
             case HeartbeatPacket _ignored ->

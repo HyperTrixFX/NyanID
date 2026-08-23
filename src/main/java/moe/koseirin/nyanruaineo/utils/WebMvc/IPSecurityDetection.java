@@ -11,6 +11,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import moe.koseirin.nyanruaineo.utils.RedisUtils.RedisService;
 import moe.koseirin.nyanruaineo.utils.utilset;
+import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.RestController;
@@ -46,7 +47,7 @@ public class IPSecurityDetection implements HandlerInterceptor {
     }
 
     @Override
-    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws IOException {
+    public boolean preHandle(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull Object handler) throws IOException {
         String ip = ipResolver.getStrictClientIp(request);
         long currentTime = System.currentTimeMillis();
         AccessTime accessTime = accessMap.get(ip);
@@ -70,7 +71,7 @@ public class IPSecurityDetection implements HandlerInterceptor {
             jsonObject.put("ip",ip);
             jsonObject.put("timestamp",LocalDateTime.now());
             response.setContentType("application/json");
-            response.setStatus(0721);
+            response.setStatus(465);
             out.println(JSONObject.toJSONString(jsonObject));
             return false;
         }else {

@@ -1,132 +1,168 @@
 package moe.koseirin.nyanruaineo.network.Minecraft.service;
 
-
-
-/*
- * @author KoseiRin_
- * awa
- */
-
-import io.netty.bootstrap.Bootstrap;
-import io.netty.buffer.ByteBuf;
-import io.netty.channel.*;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.nio.NioSocketChannel;
-import jakarta.annotation.PreDestroy;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import moe.koseirin.nyanruaineo.network.Minecraft.config.ProxyProperties;
-import moe.koseirin.nyanruaineo.network.Minecraft.network.codec.PacketDecoder;
-import moe.koseirin.nyanruaineo.network.Minecraft.network.codec.PacketEncoder;
-import moe.koseirin.nyanruaineo.network.Minecraft.network.codec.VarIntCodec;
-import moe.koseirin.nyanruaineo.network.Minecraft.network.handler.BackendRelayHandler;
-import moe.koseirin.nyanruaineo.network.Minecraft.network.handler.FrontendRelayHandler;
-import moe.koseirin.nyanruaineo.network.Minecraft.network.handler.MinecraftProtocolHandler;
-import moe.koseirin.nyanruaineo.network.Minecraft.network.packet.MinecraftPacketRegistry;
-import moe.koseirin.nyanruaineo.network.Minecraft.network.packet.Packet;
 import org.springframework.stereotype.Component;
 
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+/**
+ * Resolves which backend (sub) server a connection should be routed to, looks servers up by name
+ * for the {@code /server} command and tracks whether each backend is online. Routing keys off the
+ * Handshake server address (matched against a configured backend's name or host) and falls back
+ * to the configured default server, then to the highest-priority server. The list is read from
+ * {@code proxy.backend.servers} at every lookup, so it can be adjusted at runtime without a
+ * restart.
+ */
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class BackendServerManager {
 
+    /** How long a successful or failed online probe is reused before probing again. */
+    private static final long ONLINE_CACHE_MILLIS = 5000;
+
     private final ProxyProperties properties;
-    private final MinecraftPacketRegistry packetRegistry;
 
-    private final EventLoopGroup backendGroup = new NioEventLoopGroup(4);
+    /** Probes run off the Netty event loop so a dead backend never stalls player traffic. */
+    private final ExecutorService probeExecutor = Executors.newFixedThreadPool(2, runnable -> {
+        Thread thread = new Thread(runnable, "backend-online-probe");
+        thread.setDaemon(true);
+        return thread;
+    });
 
-    /**
-     * 连接后端服务器，并在成功后发送初始包
-     *
-     * @param frontendChannel 前端客户端通道
-     * @param initialPacket   需要首先发送到后端的包（如 LoginStartPacket）
-     */
-    public void connectAndForward(Channel frontendChannel, Packet initialPacket) {
-        String host = properties.getBackendHost();
-        int port = properties.getBackendPort();
+    private final Map<String, OnlineStatus> onlineCache = new ConcurrentHashMap<>();
 
-        log.info("Attempting to connect to backend {}:{} for frontend channel {}", host, port, frontendChannel.id());
-
-        // 暂停前端读取，防止在连接建立前有更多数据到达
-        frontendChannel.config().setAutoRead(false);
-
-        Bootstrap b = new Bootstrap();
-        b.group(backendGroup)
-                .channel(NioSocketChannel.class)
-                .option(ChannelOption.TCP_NODELAY, true)
-                .handler(new ChannelInitializer<SocketChannel>() {
-                    @Override
-                    protected void initChannel(SocketChannel ch) {
-                        ChannelPipeline pipeline = ch.pipeline();
-                        pipeline.addLast("decoder", new PacketDecoder(packetRegistry, MinecraftProtocolHandler.STATE_KEY));
-                        pipeline.addLast("encoder", new PacketEncoder());
-                        pipeline.addLast("relay", new BackendRelayHandler(frontendChannel));
-                        log.debug("Backend channel {} pipeline initialized", ch.id());
-                    }
-                });
-
-        ChannelFuture future = b.connect(host, port);
-        future.addListener((ChannelFutureListener) f -> {
-            if (f.isSuccess()) {
-                Channel backendChannel = f.channel();
-                log.info("Successfully connected to backend {}:{} (backend channel: {}) for frontend {}",
-                        host, port, backendChannel.id(), frontendChannel.id());
-
-                // 手动发送初始包（LoginStartPacket）
-                sendPacket(backendChannel, initialPacket);
-                log.debug("Initial packet (LoginStart) sent to backend channel {}", backendChannel.id());
-
-                // 在前端 pipeline 添加转发处理器（注意添加位置在最后）
-                if (frontendChannel.pipeline().get("frontendRelay") == null) {
-                    frontendChannel.pipeline().addLast("frontendRelay", new FrontendRelayHandler(backendChannel));
-                    log.debug("FrontendRelayHandler added to frontend channel {}", frontendChannel.id());
-                }
-
-                // 恢复前端读取
-                frontendChannel.config().setAutoRead(true);
-                log.debug("Frontend channel {} auto-read restored", frontendChannel.id());
-
-                // 双向关闭监听
-                backendChannel.closeFuture().addListener((ChannelFutureListener) closeFuture -> {
-                    log.info("Backend channel {} closed, closing frontend {}", backendChannel.id(), frontendChannel.id());
-                    if (frontendChannel.isActive()) {
-                        frontendChannel.close();
-                    }
-                });
-                frontendChannel.closeFuture().addListener((ChannelFutureListener) closeFuture -> {
-                    log.info("Frontend channel {} closed, closing backend {}", frontendChannel.id(), backendChannel.id());
-                    if (backendChannel.isActive()) {
-                        backendChannel.close();
-                    }
-                });
-
-            } else {
-                log.error("Failed to connect to backend {}:{} for frontend {}", host, port, frontendChannel.id(), f.cause());
-                frontendChannel.close();
-            }
-        });
+    public BackendServerManager(ProxyProperties properties) {
+        this.properties = properties;
     }
 
     /**
-     * 将 Packet 编码并发送到指定通道
+     * Resolves the backend for an incoming connection, or {@code null} when no server is configured.
+     * <ol>
+     *   <li>Match the requested handshake address against a server name or host;</li>
+     *   <li>fall back to the configured default server (matched by name or uid);</li>
+     *   <li>otherwise the highest-priority server in the list.</li>
+     * </ol>
+     * Entries without a usable host/port are skipped for routing. The old single-backend
+     * {@code proxy.backend.host/port} keys are no longer used.
      */
-    private void sendPacket(Channel channel, Packet packet) {
-        ByteBuf temp = channel.alloc().buffer();
-        try {
-            VarIntCodec.writeVarInt(temp, packet.packetId());
-            packet.encode(temp);
-            log.trace("Encoding packet id {} for sending to channel {}", packet.packetId(), channel.id());
-            channel.writeAndFlush(temp.retainedDuplicate());
-        } finally {
-            temp.release();
+    public BackendServer select(String requestedAddress) {
+        List<BackendServer> servers = properties.getBackendServers();
+        if (servers.isEmpty()) {
+            return null;
+        }
+
+        // 1. Match the requested handshake address against a server name or host.
+        if (requestedAddress != null && !requestedAddress.isBlank()) {
+            for (BackendServer server : servers) {
+                if (server.getName().equalsIgnoreCase(requestedAddress)
+                        || server.getHost().equalsIgnoreCase(requestedAddress)) {
+                    return server;
+                }
+            }
+        }
+
+        // 2. Fall back to the configured default server (matched by name or uid).
+        String defaultServer = properties.getServerListConfig().getDefaultServer();
+        if (defaultServer != null && !defaultServer.isBlank()) {
+            for (BackendServer server : servers) {
+                if (server.getName().equalsIgnoreCase(defaultServer)
+                        || (server.getUid() != null && server.getUid().equalsIgnoreCase(defaultServer))) {
+                    return server;
+                }
+            }
+        }
+
+        // 3. Otherwise the highest-priority server.
+        return servers.stream().min(java.util.Comparator.comparingInt(BackendServer::getPriority)).orElse(null);
+    }
+
+    /**
+     * Looks a server up by name (case-insensitive) for the {@code /server} command, or {@code null}
+     * when no such server exists. The lookup covers every configured entry, even ones without a
+     * usable host/port, so the command can report them as offline instead of unknown.
+     */
+    public BackendServer findByName(String name) {
+        if (name == null || name.isBlank()) {
+            return null;
+        }
+        for (BackendServer server : allEntries()) {
+            if (server.getName() != null && server.getName().equalsIgnoreCase(name)) {
+                return server;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * The display names of EVERY configured server, for the {@code /server} list. Unusable entries
+     * are listed too (they simply show up as offline when a player tries to join them).
+     */
+    public List<String> serverNames() {
+        return allEntries().stream()
+                .map(BackendServer::getName)
+                .filter(name -> name != null && !name.isBlank())
+                .map(String::trim)
+                .toList();
+    }
+
+    private List<BackendServer> allEntries() {
+        List<BackendServer> servers = properties.getServerListConfig().getServerList();
+        return servers == null ? List.of() : servers;
+    }
+
+    /**
+     * Every configured server entry (including ones without a usable host/port), for status and
+     * player queries. Usable entries are the same list {@link #select(String)} routes from.
+     */
+    public List<BackendServer> listServers() {
+        return allEntries();
+    }
+
+    /**
+     * Whether the backend currently answers a TCP connection. Results are cached for a few seconds
+     * so repeated {@code /server} checks do not re-probe. Servers without a usable host/port are
+     * always reported offline. Blocks (probe timeout) — use {@link #isOnlineAsync(BackendServer)}
+     * from event-loop threads.
+     */
+    public boolean isOnline(BackendServer server) {
+        if (server == null || server.getHost() == null || server.getHost().isBlank() || server.getPort() <= 0) {
+            return false;
+        }
+        String key = server.getHost().toLowerCase(Locale.ROOT) + ":" + server.getPort();
+        OnlineStatus cached = onlineCache.get(key);
+        if (cached != null && System.currentTimeMillis() - cached.checkedAt() < ONLINE_CACHE_MILLIS) {
+            return cached.online();
+        }
+
+        boolean online = probe(server.getHost(), server.getPort());
+        onlineCache.put(key, new OnlineStatus(online, System.currentTimeMillis()));
+        log.debug("Probed backend {}:{} -> online={}", server.getHost(), server.getPort(), online);
+        return online;
+    }
+
+    /** Asynchronous variant of {@link #isOnline(BackendServer)} for Netty event-loop threads. */
+    public CompletableFuture<Boolean> isOnlineAsync(BackendServer server) {
+        return CompletableFuture.supplyAsync(() -> isOnline(server), probeExecutor);
+    }
+
+    private static boolean probe(String host, int port) {
+        try (Socket socket = new Socket()) {
+            socket.connect(new InetSocketAddress(host, port), 2000);
+            return true;
+        } catch (Exception e) {
+            return false;
         }
     }
 
-    @PreDestroy
-    public void shutdown() {
-        log.info("Shutting down backend event loop group");
-        backendGroup.shutdownGracefully();
+    private record OnlineStatus(boolean online, long checkedAt) {
     }
 }

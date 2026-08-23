@@ -13,6 +13,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.io.Serializable;
+import java.util.List;
 
 @Repository
 public interface NyanIDuserRepository extends JpaRepository<NyanIDuser, String>, Serializable {
@@ -47,5 +48,5 @@ public interface NyanIDuserRepository extends JpaRepository<NyanIDuser, String>,
     void UpdateNickname(String nickname,String uid);
 
 
-
+    List<NyanIDuser> findByNicknameContaining(String nickname);
 }

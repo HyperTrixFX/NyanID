@@ -17,6 +17,8 @@
 
     <properties>
         <java.version>21</java.version>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
     </properties>
 
     <dependencies>
@@ -106,7 +108,7 @@
         <dependency>
             <groupId>com.alibaba.fastjson2</groupId>
             <artifactId>fastjson2</artifactId>
-            <version>2.0.52</version>
+            <version>2.0.64</version>
         </dependency>
 
         <dependency>
@@ -125,6 +127,13 @@
             <groupId>org.quartz-scheduler</groupId>
             <artifactId>quartz</artifactId>
             <version>2.5.2</version>
+        </dependency>
+
+        <!-- https://repo1.maven.org/maven2/io/github/kloping/bot-qqpd-java/ -->
+        <dependency>
+            <groupId>io.github.kloping</groupId>
+            <artifactId>bot-qqpd-java</artifactId>
+            <version>1.5.4-L1</version>
         </dependency>
 
         <!-- Netty -->

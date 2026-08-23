@@ -6,9 +6,11 @@ package moe.koseirin.nyanruaineo.network.Packet.Client;
  */
 
 import io.netty.buffer.ByteBuf;
+import lombok.Getter;
 import moe.koseirin.nyanruaineo.network.Interface.Packet;
 import moe.koseirin.nyanruaineo.network.utils.PacketCodecUtil;
 
+@Getter
 public class CheckBindPacket implements Packet {
     private String uuid;
 
@@ -33,5 +35,4 @@ public class CheckBindPacket implements Packet {
         this.uuid = PacketCodecUtil.readString(buf);
     }
 
-    public String getUuid() { return uuid; }
 }

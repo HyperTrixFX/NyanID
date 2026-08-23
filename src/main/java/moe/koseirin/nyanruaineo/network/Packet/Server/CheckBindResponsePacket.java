@@ -6,10 +6,13 @@ package moe.koseirin.nyanruaineo.network.Packet.Server;
  */
 
 import io.netty.buffer.ByteBuf;
+import lombok.Getter;
 import moe.koseirin.nyanruaineo.network.Interface.Packet;
 import moe.koseirin.nyanruaineo.network.utils.PacketCodecUtil;
 
+@Getter
 public class CheckBindResponsePacket implements Packet {
+    // getters
     private boolean bind;
     private String muid;
     private String uuid;
@@ -49,9 +52,4 @@ public class CheckBindResponsePacket implements Packet {
         }
     }
 
-    // getters
-    public boolean isBind() { return bind; }
-    public String getMuid() { return muid; }
-    public String getUuid() { return uuid; }
-    public String getUsername() { return username; }
 }

@@ -10,7 +10,7 @@ import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import moe.koseirin.nyanruaineo.network.Minecraft.config.ProxyProperties;
-import moe.koseirin.nyanruaineo.network.Minecraft.network.ProtocolVersion;
+import moe.koseirin.nyanruaineo.network.Minecraft.protocol.ProtocolVersion;
 import moe.koseirin.nyanruaineo.network.Minecraft.util.FileUtils;
 import moe.koseirin.nyanruaineo.network.Minecraft.util.PlaceholderResolver;
 import moe.koseirin.nyanruaineo.network.Minecraft.util.RGBColorConverter;
@@ -64,14 +64,20 @@ public class PingResponseProvider {
         }
     }
 
-    public String getPingJson(ProtocolVersion clientVersion) {
+    /**
+     * Builds the server list ping JSON. The reported protocol version echoes the client's own
+     * protocol number so every supported client version sees the proxy as compatible, without a
+     * hardcoded version in the MOTD configuration. {@code realOnline} is the number of players
+     * currently in the play phase.
+     */
+    public String getPingJson(int clientProtocol, int realOnline) {
         ObjectNode root = objectMapper.createObjectNode();
 
         // 获取MOTD配置
         ProxyProperties.MotdConfig motdConfig = properties.getMotdConfig();
 
-        // 更新真实在线人数（可以从其他地方获取）
-        placeholderResolver.updateRealOnline(0); // TODO: 从实际数据源获取
+        // 更新真实在线人数
+        placeholderResolver.updateRealOnline(realOnline);
 
         // 选择MOTD条目（如果配置了随机MOTD）
         List<String> motdLines;
@@ -102,7 +108,7 @@ public class PingResponseProvider {
             hoverLines = motdConfig.getHoverLines();
         }
 
-        int protocol = clientVersion.getProtocol();
+        int protocol = clientProtocol;
         String firstLine = motdLines.isEmpty() ? "" : motdLines.get(0);
         String secondLine = motdLines.size() > 1 ? motdLines.get(1) : "";
 
@@ -117,10 +123,13 @@ public class PingResponseProvider {
         root.set("description", description);
 
         ObjectNode version = objectMapper.createObjectNode();
-        String versionName = placeholderResolver.resolve(motdConfig.getVersionName(), motdConfig);
-        versionName = RGBColorConverter.convert(versionName, protocol);
+        ProtocolVersion knownVersion = ProtocolVersion.fromProtocol(clientProtocol);
+        String versionName = knownVersion == ProtocolVersion.UNKNOWN
+                ? "Minecraft " + clientProtocol
+                : knownVersion.getVersionName();
         version.put("name", versionName);
-        version.put("protocol", motdConfig.getProtocolVersion());
+        // Echo the client's own protocol so any version reports itself as compatible.
+        version.put("protocol", clientProtocol);
         root.set("version", version);
 
         ObjectNode players = objectMapper.createObjectNode();
@@ -132,10 +141,11 @@ public class PingResponseProvider {
 
         int onlinePlayers;
         if (motdConfig.isFakePlayersEnabled()) {
+            // Fake-player display feature: real online players + the configured fake amount.
             String totalOnlineStr = placeholderResolver.resolve("%total_online%", motdConfig);
             onlinePlayers = Integer.parseInt(totalOnlineStr);
         } else {
-            onlinePlayers = 0; // 真实在线
+            onlinePlayers = realOnline; // 真实在线
         }
         players.put("online", onlinePlayers);
 

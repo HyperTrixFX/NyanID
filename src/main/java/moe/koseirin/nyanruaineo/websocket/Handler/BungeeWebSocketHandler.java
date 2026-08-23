@@ -8,17 +8,10 @@ package moe.koseirin.nyanruaineo.websocket.Handler;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import lombok.extern.slf4j.Slf4j;
-import moe.koseirin.nyanruaineo.entity.Accounts;
 import moe.koseirin.nyanruaineo.eventbus.EventBus;
 import moe.koseirin.nyanruaineo.eventbus.Interface.EventHeader;
 import moe.koseirin.nyanruaineo.network.Interface.Packet;
-import moe.koseirin.nyanruaineo.network.Packet.Client.BindAccountPacket;
-import moe.koseirin.nyanruaineo.network.Packet.Client.CheckBindPacket;
 import moe.koseirin.nyanruaineo.network.Packet.Client.HeartbeatResponsePacket;
-import moe.koseirin.nyanruaineo.network.Packet.Client.UpdateOnlinePacket;
-import moe.koseirin.nyanruaineo.network.Packet.Server.CheckBindResponsePacket;
-import moe.koseirin.nyanruaineo.network.Packet.Server.HeartbeatPacket;
-import moe.koseirin.nyanruaineo.network.Packet.Server.UpdateOnlineResponsePacket;
 import moe.koseirin.nyanruaineo.network.utils.KeyManager;
 import moe.koseirin.nyanruaineo.network.utils.PacketCodecUtil;
 import moe.koseirin.nyanruaineo.network.utils.PacketRegistry;
@@ -39,7 +32,6 @@ import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
 
 
 @Slf4j
@@ -47,8 +39,6 @@ import java.util.concurrent.TimeUnit;
 public class BungeeWebSocketHandler extends BinaryWebSocketHandler {
 
     private final ServerListRepository serverListRepository;
-    private final RedisService redisService;
-    private final AccountsRepository accountsRepository;
     private final KeyManager KeyManager;
     private final PacketRegistry packetRegistry;
     private final EventBus eventBus;
@@ -56,8 +46,6 @@ public class BungeeWebSocketHandler extends BinaryWebSocketHandler {
 
     public BungeeWebSocketHandler(ServerListRepository serverListRepository, RedisService redisService, AccountsRepository accountsRepository, KeyManager KeyManager, PacketRegistry packetRegistry, EventBus eventBus) {
         this.serverListRepository = serverListRepository;
-        this.redisService = redisService;
-        this.accountsRepository = accountsRepository;
         this.KeyManager = KeyManager;
         this.packetRegistry = packetRegistry;
         this.eventBus = eventBus;
@@ -88,7 +76,6 @@ public class BungeeWebSocketHandler extends BinaryWebSocketHandler {
     }
 
     @Override
-    @EventHeader
     protected void handleBinaryMessage(WebSocketSession session, @NonNull BinaryMessage message) throws Exception {
         if (!authenticatedSessions.containsKey(session.getId())) {
             log.warn("未认证的会话尝试发送消息，关闭连接喵，SessionId: {}", session.getId());

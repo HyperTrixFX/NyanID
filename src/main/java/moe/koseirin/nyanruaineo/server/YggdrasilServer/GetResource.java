@@ -44,15 +44,14 @@ public class GetResource {
         switch (type) {
             case "avatar": {
                 if (data.length() != 32) {
-                    return respond.respond(MediaType.APPLICATION_JSON, 400,
-                            new ErrorResponse("Not a valid universal identifier.", "Illegal Request", "Illegal Request"));
+                    return respond.respond(MediaType.APPLICATION_JSON, 400,new ErrorResponse("Not a valid universal identifier.", "Illegal Request", "Illegal Request"));
                 }
-
                 Boolean isGif = nyanIDuserRepository.IsGIFAvatar(data);
                 Boolean enableGif = nyanIDuserRepository.EnableGIFAvatar(data);
                 if (isGif && enableGif) {
                     int avatarId = nyanIDuserRepository.GIFAvatarID(data);
-                    Path avatarPath = Paths.get("Data/GIFAvatar/" + avatarId + ".gif");
+                    Path baseDir = Paths.get("Data/GIFAvatar").toRealPath();
+                    Path avatarPath = baseDir.resolve("Data/GIFAvatar/" + avatarId + ".gif").normalize();
                     File file = new File(avatarPath.toString());
                     if (file.exists()) {
                         return ResponseEntity.ok()
@@ -66,19 +65,22 @@ public class GetResource {
                 }
             }
             case "textures": {
-                if (data.length() <= 1) {
-                    return respond.respond(MediaType.APPLICATION_JSON, 400,
-                            new ErrorResponse("Not a valid universal identifier.", "Illegal Request", "Illegal Request"));
+                if (!data.matches("^[0-9a-fA-F]{1,64}$")) {
+                    return respond.respond(MediaType.APPLICATION_JSON, 400,new ErrorResponse("Not a valid universal identifier.", "Illegal Request", "Illegal Request"));
                 }
-                Path texturePath = Paths.get("Data/YggdrasilTexture/hash-" + data);
-                File file = new File(texturePath.toString());
-                if (file.exists()) {
-                    return ResponseEntity.ok()
-                            .contentType(MediaType.IMAGE_PNG)
-                            .body(readFileBytes(file));
+
+                Path baseDir = Paths.get("Data/YggdrasilTexture").toRealPath();
+                Path texturePath = baseDir.resolve("hash-" + data).normalize();
+
+                if (!texturePath.startsWith(baseDir)) {
+                    return respond.respond(MediaType.APPLICATION_JSON, 400,new ErrorResponse("Invalid path.", "Illegal Request", "Illegal Request"));
+                }
+
+                File file = texturePath.toFile();
+                if (file.exists() && file.isFile()) {
+                    return ResponseEntity.ok().contentType(MediaType.IMAGE_PNG).body(readFileBytes(file));
                 } else {
-                    return respond.respond(MediaType.APPLICATION_JSON, 404,
-                            new ErrorResponse("Not Found SKINTexture", "Not Found", "Not Found"));
+                    return respond.respond(MediaType.APPLICATION_JSON, 404,new ErrorResponse("Not Found SKINTexture", "Not Found", "Not Found"));
                 }
             }
             default:
@@ -88,9 +90,18 @@ public class GetResource {
     }
 
     private ResponseEntity<?> loadPngAvatar(String data) throws IOException {
-        Path avatarPath = Paths.get("Data/UserAvatar/UA-" + data + ".png");
-        File file = new File(avatarPath.toString());
-        if (file.exists()) {
+        if (!data.matches("^[0-9a-fA-F]{32}$")) {
+            return respond.respond(MediaType.APPLICATION_JSON, 400,
+                    new ErrorResponse("Invalid avatar identifier.", "Illegal Request", "Illegal Request"));
+        }
+        Path baseDir = Paths.get("Data/UserAvatar").toRealPath();
+        Path avatarPath = baseDir.resolve("UA-" + data + ".png").normalize();
+        if (!avatarPath.startsWith(baseDir)) {
+            return respond.respond(MediaType.APPLICATION_JSON, 400,
+                    new ErrorResponse("Invalid path.", "Illegal Request", "Illegal Request"));
+        }
+        File file = avatarPath.toFile();
+        if (file.exists() && file.isFile()) {
             return ResponseEntity.ok()
                     .contentType(MediaType.IMAGE_PNG)
                     .body(readFileBytes(file));

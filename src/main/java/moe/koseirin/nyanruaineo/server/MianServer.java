@@ -9,8 +9,7 @@ import jakarta.servlet.http.HttpServletResponse;
 //import moe.koseirin.nyanruaineo.websocket.server.BungeeConnectHandle;
 import moe.koseirin.nyanruaineo.utils.Respond;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -38,4 +37,5 @@ public class MianServer {
 //        BungeeConnectHandle.sendMessage(JSONObject.toJSONString(sJson));
         return respond.respond(MediaType.APPLICATION_JSON,200,"message","Ok!","timestamp",LocalDateTime.now());
     }
+
 }

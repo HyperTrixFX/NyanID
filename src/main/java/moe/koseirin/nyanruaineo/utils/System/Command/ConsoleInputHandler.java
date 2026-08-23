@@ -14,7 +14,7 @@ import java.util.Arrays;
 import java.util.Scanner;
 
 public class ConsoleInputHandler implements Runnable {
-    private CommandManager commandManager;
+    private final CommandManager commandManager;
 
     public ConsoleInputHandler(CommandManager commandManager) {
         this.commandManager = commandManager;
