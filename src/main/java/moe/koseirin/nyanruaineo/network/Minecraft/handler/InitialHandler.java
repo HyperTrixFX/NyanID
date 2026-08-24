@@ -203,12 +203,14 @@ public class InitialHandler extends ChannelInboundHandlerAdapter {
 
             enableEncryption(sharedSecret);
 
-            proxy.getMojangAuthService()
+            // Compatible auth: the internal Yggdrasil sessionserver is checked first (no HTTP),
+            // falling back to the Mojang session server — the login source is auto-detected.
+            proxy.getPlayerAuthService()
                     .authenticate(username, sharedSecret, keyPair.getPublic().getEncoded())
                     .thenAccept(profile -> channel.eventLoop().execute(
                             () -> finishLogin(profile.uuid(), profile.properties())))
                     .exceptionally(throwable -> {
-                        log.error("Mojang authentication failed for {}", username, throwable);
+                        log.error("Authentication failed for {}", username, throwable);
                         channel.eventLoop().execute(channel::close);
                         return null;
                     });

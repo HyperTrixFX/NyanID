@@ -53,8 +53,6 @@ public class PlayerTransferService {
         log.info("Transferring {} to {} ({}:{})", user.getUsername(), target.getName(),
                 target.getHost(), target.getPort());
 
-        // The new backend repopulates the TabList from scratch.
-        user.getTabListNames().clear();
         user.getChannel().config().setAutoRead(false);
         user.nextServerGeneration();
         ServerConnection old = user.getServer();

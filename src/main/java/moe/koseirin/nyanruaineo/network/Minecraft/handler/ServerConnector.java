@@ -26,13 +26,18 @@ import moe.koseirin.nyanruaineo.network.Minecraft.netty.PipelineUtils;
 import moe.koseirin.nyanruaineo.network.Minecraft.protocol.Protocol;
 import moe.koseirin.nyanruaineo.network.Minecraft.protocol.ProtocolConstants;
 import moe.koseirin.nyanruaineo.network.Minecraft.protocol.packet.EncryptionRequest;
+import moe.koseirin.nyanruaineo.network.Minecraft.protocol.packet.EntityStatus;
+import moe.koseirin.nyanruaineo.network.Minecraft.protocol.packet.GameState;
 import moe.koseirin.nyanruaineo.network.Minecraft.protocol.packet.Handshake;
+import moe.koseirin.nyanruaineo.network.Minecraft.protocol.packet.JoinGame;
 import moe.koseirin.nyanruaineo.network.Minecraft.protocol.packet.Kick;
 import moe.koseirin.nyanruaineo.network.Minecraft.protocol.packet.LoginRequest;
 import moe.koseirin.nyanruaineo.network.Minecraft.protocol.packet.LoginSuccess;
 import moe.koseirin.nyanruaineo.network.Minecraft.protocol.packet.SetCompression;
 import moe.koseirin.nyanruaineo.network.Minecraft.protocol.packet.TabListHeaderFooter;
+import moe.koseirin.nyanruaineo.network.Minecraft.protocol.packet.ViewDistance;
 import moe.koseirin.nyanruaineo.network.Minecraft.service.BackendServer;
+import moe.koseirin.nyanruaineo.network.Minecraft.service.PlayerStateService;
 
 import java.net.InetSocketAddress;
 
@@ -48,6 +53,7 @@ public class ServerConnector {
     private final InitialHandler initialHandler;
     private final boolean serverSwitch;
     private final BackendServer backend;
+    private final PlayerStateService playerState;
 
     public ServerConnector(MinecraftProxy proxy, UserConnection user, InitialHandler initialHandler) {
         this(proxy, user, initialHandler, null, false);
@@ -68,6 +74,7 @@ public class ServerConnector {
         this.initialHandler = initialHandler;
         this.serverSwitch = serverSwitch;
         this.backend = target != null ? target : proxy.getBackendServerManager().select(user.getRequestedServer());
+        this.playerState = proxy.getPlayerStateService();
     }
 
     public void connect() {
@@ -110,7 +117,12 @@ public class ServerConnector {
             Channel backendChannel = future.channel();
             ServerConnection server = new ServerConnection(backendChannel, host, port);
             server.setUser(user);
-            user.setServer(server);
+            // On a server switch the current server stays null until the new backend's JoinGame is
+            // relayed, so the old bridge drops its stale packets and the client's own packets are
+            // not forwarded into the still-logging-in backend.
+            if (!serverSwitch) {
+                user.setServer(server);
+            }
 
             PacketDecoder decoder = backendChannel.pipeline().get(PacketDecoder.class);
             PacketEncoder encoder = backendChannel.pipeline().get(PacketEncoder.class);
@@ -193,6 +205,8 @@ public class ServerConnector {
         public void channelRead(ChannelHandlerContext ctx, Object msg) {
             if (msg instanceof LoginSuccess) {
                 onLoginSuccess();
+            } else if (msg instanceof JoinGame joinGame) {
+                onJoinGame(joinGame);
             } else if (msg instanceof Kick kick) {
                 log.warn("Login denied by backend for {}", user.getUsername());
                 disconnectClient(kick.getReason());
@@ -231,31 +245,19 @@ public class ServerConnector {
         }
 
         private void onLoginSuccess() {
-            // Switch the backend to raw play-phase relay.
+            // Switch the backend to the play-phase protocol. The bridge is deliberately NOT
+            // installed yet: the JoinGame packet is intercepted below and relayed to the client
+            // first (BungeeCord cut-through), so no backend traffic can precede the world reset.
             backendChannel.pipeline().get(PacketDecoder.class).setProtocol(Protocol.GAME);
             backendChannel.pipeline().get(PacketEncoder.class).setProtocol(Protocol.GAME);
 
-            // Now that Login Success is (or would be) queued first, start forwarding backend traffic
-            // to the client.
-            HandlerBoss boss = backendChannel.pipeline().get(HandlerBoss.class);
-            boss.setHandler(new DownstreamBridge(proxy, user));
-
             if (serverSwitch) {
-                // Cross-server switch: the client is already in the play phase, so no Login Success
-                // is sent again; just resume the client, refresh the TabList header/footer and
-                // forward the new backend's traffic.
-                user.getChannel().eventLoop().execute(() -> {
-                    user.getChannel().config().setAutoRead(true);
-                    sendTabHeaderFooter();
-                });
-                log.debug("{} ({}) switched to backend {}:{}", user.getUsername(), user.getUuid(),
-                        server.getHost(), server.getPort());
                 return;
             }
 
-            // Send Login Success to the client BEFORE the backend bridge starts relaying. Pre-1.19.3
-            // backends emit PLAY packets immediately after Login Success, so without this ordering the
-            // client would receive PLAY packets before it has left the login state.
+            // First connection: send Login Success to the client. Pre-1.19.3 backends emit PLAY
+            // packets immediately after Login Success, so it must be written before any backend
+            // traffic is relayed.
             LoginSuccess loginSuccess = new LoginSuccess(user.getUuid(), user.getUsername(), user.getProperties());
             if (log.isDebugEnabled()) {
                 io.netty.buffer.ByteBuf probe = io.netty.buffer.Unpooled.buffer();
@@ -272,10 +274,76 @@ public class ServerConnector {
             user.sendPacket(loginSuccess);
             log.debug("LoginSuccess sent to {} ({}) for protocol {}", user.getUsername(), user.getUuid(),
                     user.getProtocolVersion());
+        }
 
-            // Complete the client side on the client channel's event loop. The TabList
-            // header/footer is pushed there once the front-end codecs switched to GAME.
-            user.getChannel().eventLoop().execute(() -> initialHandler.onServerConnected(server));
+        /**
+         * BungeeCord cut-through: mirrors {@code ServerConnector.handleLogin} + {@code cutThrough}.
+         * First connections (any version) and 1.16+ switches get the JoinGame written directly to
+         * the client, followed (on a switch) by a Respawn with the new server's world data and the
+         * removal of everything the old server sent. Pre-1.16 switches perform the legacy respawn
+         * dance instead of forwarding the JoinGame. The play-phase bridge is only installed after
+         * the world reset, so no stale packet can precede or corrupt it.
+         */
+        private void onJoinGame(JoinGame login) {
+            int version = user.getProtocolVersion();
+
+            playerState.setClientEntityId(user, login.getEntityId());
+            playerState.setServerEntityId(user, login.getEntityId());
+
+            // First connection (any version) or 1.16+ switch: the JoinGame is sent directly.
+            if (!serverSwitch || version >= 735) {
+                if (!serverSwitch) {
+                    // Complete the client side first (front-end codecs switch to GAME and the
+                    // UpstreamBridge is installed); the JoinGame write below is submitted
+                    // afterwards, so it is encoded in the GAME state.
+                    user.getChannel().eventLoop().execute(() -> initialHandler.onServerConnected(server));
+                }
+
+                user.sendPacket(login);
+                if (serverSwitch) {
+                    // BungeeCord handleLogin: forget the old server's scoreboard/teams/bossbars,
+                    // reset the tab list names, then rebuild the world state with a Respawn.
+                    playerState.clearServerState(user, user::sendPacket);
+                    proxy.getTabListService().resetTabList(user);
+                    user.sendPacket(login.toRespawn());
+                }
+                playerState.setDimension(user, login.getDimension());
+            } else {
+                // Pre-1.16 switch: the legacy respawn dance (no JoinGame forwarded).
+                playerState.clearServerState(user, user::sendPacket);
+                proxy.getTabListService().resetTabList(user);
+                user.sendPacket(new EntityStatus(playerState.getClientEntityId(user),
+                        login.isReducedDebugInfo() ? EntityStatus.DEBUG_INFO_REDUCED : EntityStatus.DEBUG_INFO_NORMAL));
+                if (version >= 573) {
+                    user.sendPacket(new GameState(GameState.IMMEDIATE_RESPAWN, login.isNormalRespawn() ? 0 : 1));
+                }
+                playerState.setDimensionChange(user, true);
+                Object currentDimension = playerState.getDimension(user);
+                if (currentDimension != null && login.getDimension() != null
+                        && login.getDimension().equals(currentDimension)) {
+                    user.sendPacket(login.toRespawn(((Integer) login.getDimension()) >= 0 ? -1 : 0));
+                }
+                playerState.setServerEntityId(user, login.getEntityId());
+                user.sendPacket(login.toRespawn());
+                if (version >= 477) {
+                    user.sendPacket(new ViewDistance(login.getViewDistance()));
+                }
+                playerState.setDimension(user, login.getDimension());
+            }
+
+            // cutThrough: swap the current server, then install the play-phase bridge.
+            user.setServer(server);
+            HandlerBoss boss = backendChannel.pipeline().get(HandlerBoss.class);
+            boss.setHandler(new DownstreamBridge(proxy, user, server));
+
+            if (serverSwitch) {
+                user.getChannel().eventLoop().execute(() -> {
+                    user.getChannel().config().setAutoRead(true);
+                    sendTabHeaderFooter();
+                });
+                log.debug("{} ({}) switched to backend {}:{}", user.getUsername(), user.getUuid(),
+                        server.getHost(), server.getPort());
+            }
         }
 
         /**
@@ -285,7 +353,7 @@ public class ServerConnector {
          */
         private void sendTabHeaderFooter() {
             TabListHeaderFooter tabHeader = proxy.getTabListService()
-                    .buildHeaderFooter(user.getProtocolVersion(), proxy.getOnlineCount());
+                    .buildHeaderFooter(user, proxy.getOnlineCount());
             if (tabHeader != null) {
                 user.sendPacket(tabHeader);
             }

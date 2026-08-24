@@ -115,6 +115,7 @@ public class UpstreamBridge extends ChannelInboundHandlerAdapter {
             server.close();
         }
         proxy.playerLeft(user);
+        proxy.getPlayerStateService().remove(user);
         proxy.getEventBus().postAsync(new PlayerDisconnectEvent(user.getUsername(), user.getUuid()));
     }
 

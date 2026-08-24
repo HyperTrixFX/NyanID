@@ -5,6 +5,8 @@ package moe.koseirin.nyanruaineo.network.Minecraft.service;
  * awa
  */
 
+import com.alibaba.fastjson2.JSONArray;
+import com.alibaba.fastjson2.JSONObject;
 import jakarta.annotation.PostConstruct;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -71,15 +73,15 @@ public class PingResponseProvider {
      * currently in the play phase.
      */
     public String getPingJson(int clientProtocol, int realOnline) {
-        ObjectNode root = objectMapper.createObjectNode();
+        JSONObject root = new JSONObject();
 
-        // 获取MOTD配置
+        // 获取 MOTD 配置
         ProxyProperties.MotdConfig motdConfig = properties.getMotdConfig();
 
         // 更新真实在线人数
         placeholderResolver.updateRealOnline(realOnline);
 
-        // 选择MOTD条目（如果配置了随机MOTD）
+        // 选择 MOTD 条目（随机或固定）
         List<String> motdLines;
         List<String> hoverLines;
 
@@ -118,63 +120,73 @@ public class PingResponseProvider {
         firstLine = RGBColorConverter.convert(firstLine, protocol);
         secondLine = RGBColorConverter.convert(secondLine, protocol);
 
-        ObjectNode description = objectMapper.createObjectNode();
+        // description
+        JSONObject description = new JSONObject();
         description.put("text", firstLine + "\n" + secondLine);
-        root.set("description", description);
+        root.put("description", description);
 
-        ObjectNode version = objectMapper.createObjectNode();
+        // version
+        JSONObject version = new JSONObject();
         ProtocolVersion knownVersion = ProtocolVersion.fromProtocol(clientProtocol);
         String versionName = knownVersion == ProtocolVersion.UNKNOWN
                 ? "Minecraft " + clientProtocol
                 : knownVersion.getVersionName();
         version.put("name", versionName);
-        // Echo the client's own protocol so any version reports itself as compatible.
         version.put("protocol", clientProtocol);
-        root.set("version", version);
+        root.put("version", version);
 
-        ObjectNode players = objectMapper.createObjectNode();
+        // players
+        JSONObject players = new JSONObject();
         int maxPlayers = motdConfig.getMaxPlayers();
         if (maxPlayers <= 0) {
-            maxPlayers = 100; // 默认值
+            maxPlayers = 100;
         }
         players.put("max", maxPlayers);
 
         int onlinePlayers;
         if (motdConfig.isFakePlayersEnabled()) {
-            // Fake-player display feature: real online players + the configured fake amount.
             String totalOnlineStr = placeholderResolver.resolve("%total_online%", motdConfig);
             onlinePlayers = Integer.parseInt(totalOnlineStr);
         } else {
-            onlinePlayers = realOnline; // 真实在线
+            onlinePlayers = realOnline;
         }
         players.put("online", onlinePlayers);
 
         if (hoverLines != null && !hoverLines.isEmpty()) {
-            ArrayNode sample = objectMapper.createArrayNode();
+            JSONArray sample = new JSONArray();
             for (String line : hoverLines) {
                 line = placeholderResolver.resolve(line, motdConfig);
                 line = RGBColorConverter.convert(line, protocol);
-                ObjectNode player = objectMapper.createObjectNode();
+                JSONObject player = new JSONObject();
                 player.put("name", line);
                 player.put("id", "00000000-0000-0000-0000-000000000000");
                 sample.add(player);
             }
-            players.set("sample", sample);
+            players.put("sample", sample);
         }
-        root.set("players", players);
+        root.put("players", players);
 
+        // favicon
         String icon = faviconBase64.get();
         if (!icon.isEmpty()) {
             root.put("favicon", icon);
         }
 
+        // ----------modinfo字段 ----------
+        JSONObject modinfo = new JSONObject();
+        modinfo.put("type", "FML");
+        JSONArray modList = new JSONArray();
+        JSONObject mod = new JSONObject(); mod.put("modid", "examplemod"); mod.put("version", "1.0.0"); modList.add(mod);
+        modinfo.put("modList", modList);
+        root.put("modinfo", modinfo);
+        // -----------------------------------------
+
         try {
-            return objectMapper.writeValueAsString(root);
+            return JSONObject.toJSONString(root);
         } catch (Exception e) {
             log.error("Failed to serialize ping response", e);
             return "{\"description\":{\"text\":\"Ping error\"}}";
         }
-
     }
 
     @Data

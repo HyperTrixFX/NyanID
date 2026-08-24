@@ -5,10 +5,8 @@ import com.alibaba.fastjson2.JSONObject;
 import com.alibaba.fastjson2.annotation.JSONField;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
-import moe.koseirin.nyanruaineo.entity.SystemConfig;
 import moe.koseirin.nyanruaineo.network.Minecraft.service.BackendServer;
 import moe.koseirin.nyanruaineo.network.Minecraft.service.ServerListConfig;
-import moe.koseirin.nyanruaineo.repository.SystemConfigRepository;
 import moe.koseirin.nyanruaineo.utils.System.SystemConfigCacheService;
 import org.springframework.stereotype.Component;
 
@@ -34,11 +32,9 @@ public class ProxyProperties {
     private static final String KEY_IP_FORWARD = "proxy.ip-forward";
 
     private final SystemConfigCacheService cacheService;
-    private final SystemConfigRepository systemConfigRepository;
 
-    public ProxyProperties(SystemConfigCacheService cacheService, SystemConfigRepository systemConfigRepository) {
+    public ProxyProperties(SystemConfigCacheService cacheService) {
         this.cacheService = cacheService;
-        this.systemConfigRepository = systemConfigRepository;
     }
 
     public int getPort() {
@@ -64,20 +60,14 @@ public class ProxyProperties {
      * }
      * </pre>
      *
-     * The value is read fresh from the database on every call so runtime edits take effect without a
-     * restart. A missing key writes the default config back; the legacy JSON-array format is
-     * migrated automatically. The old single-backend {@code proxy.backend.host/port} keys are no
-     * longer used.
+     * The value is read from the in-memory {@link SystemConfigCacheService} (loaded at startup,
+     * kept up to date by the config edit flow and the manual {@code ReloadConfig} refresh — the
+     * database is never queried here). A missing key writes the default config back; the legacy
+     * JSON-array format is migrated automatically. The old single-backend
+     * {@code proxy.backend.host/port} keys are no longer used.
      */
     public ServerListConfig getServerListConfig() {
-        String val = null;
-        try {
-            SystemConfig stored = systemConfigRepository.findById(KEY_BACKEND_SERVERS).orElse(null);
-            val = stored == null ? null : stored.getConfigValue();
-        } catch (Exception e) {
-            log.warn("Failed to read {} from database, falling back to cache: {}", KEY_BACKEND_SERVERS, e.getMessage());
-            val = cacheService.getConfig(KEY_BACKEND_SERVERS);
-        }
+        String val = cacheService.getConfig(KEY_BACKEND_SERVERS);
 
         if (val == null || val.isBlank()) {
             ServerListConfig defaultConfig = new ServerListConfig();
@@ -232,14 +222,7 @@ public class ProxyProperties {
      * name shown in the TabList (1.8-1.18.2 clients).
      */
     public TabListConfig getTabListConfig() {
-        String val = null;
-        try {
-            SystemConfig stored = systemConfigRepository.findById(KEY_TABLIST).orElse(null);
-            val = stored == null ? null : stored.getConfigValue();
-        } catch (Exception e) {
-            log.warn("Failed to read {} from database, falling back to cache: {}", KEY_TABLIST, e.getMessage());
-            val = cacheService.getConfig(KEY_TABLIST);
-        }
+        String val = cacheService.getConfig(KEY_TABLIST);
 
         if (val == null || val.isBlank()) {
             TabListConfig defaultConfig = new TabListConfig();
@@ -247,7 +230,7 @@ public class ProxyProperties {
             defaultConfig.setHeader(Arrays.asList("§6§lNyanID 服务器群", "§7在线: §a%online%"));
             defaultConfig.setFooter(Arrays.asList("§7跨服代理 · §b/server 切换"));
             defaultConfig.setPrefix("");
-            defaultConfig.setSuffix("");
+            defaultConfig.setSuffix(" §8[%server%]");
             try {
                 cacheService.updateConfig(KEY_TABLIST, JSON.toJSONString(defaultConfig));
             } catch (Exception e) {
@@ -288,14 +271,7 @@ public class ProxyProperties {
      * database on every use; a missing key writes the default back to the cache.
      */
     public KickMessageConfig getKickMessageConfig() {
-        String val = null;
-        try {
-            SystemConfig stored = systemConfigRepository.findById(KEY_KICK_MESSAGE).orElse(null);
-            val = stored == null ? null : stored.getConfigValue();
-        } catch (Exception e) {
-            log.warn("Failed to read {} from database, falling back to cache: {}", KEY_KICK_MESSAGE, e.getMessage());
-            val = cacheService.getConfig(KEY_KICK_MESSAGE);
-        }
+        String val = cacheService.getConfig(KEY_KICK_MESSAGE);
 
         if (val == null || val.isBlank()) {
             KickMessageConfig defaultConfig = new KickMessageConfig();
@@ -384,13 +360,13 @@ public class ProxyProperties {
     @Data
     public static class TabListConfig {
         private boolean enabled;
-        /** Header lines (legacy § codes supported, {@code %online%}/{@code %max%} placeholders). */
+        /** Header lines (legacy § codes supported, {@code %online%}/{@code %max%}/{@code %server%} placeholders). */
         private List<String> header;
         /** Footer lines (same format as the header). */
         private List<String> footer;
-        /** Prepended to every player name shown in the TabList (1.8-1.18.2). */
+        /** Prepended to every player name shown in the TabList (1.8-1.18.2). {@code %server%} = the player's current sub-server. */
         private String prefix;
-        /** Appended to every player name shown in the TabList (1.8-1.18.2). */
+        /** Appended to every player name shown in the TabList (1.8-1.18.2). {@code %server%} = the player's current sub-server. */
         private String suffix;
     }
 

@@ -6,6 +6,7 @@ import io.netty.handler.codec.MessageToMessageDecoder;
 import moe.koseirin.nyanruaineo.network.Minecraft.protocol.DefinedPacket;
 import moe.koseirin.nyanruaineo.network.Minecraft.protocol.Direction;
 import moe.koseirin.nyanruaineo.network.Minecraft.protocol.Protocol;
+import moe.koseirin.nyanruaineo.network.Minecraft.protocol.ProtocolData;
 
 import java.util.List;
 
@@ -38,12 +39,13 @@ public class PacketDecoder extends MessageToMessageDecoder<ByteBuf> {
             return;
         }
 
-        if (protocol.hasPacket(direction, packetId, protocolVersion)) {
-            DefinedPacket packet = protocol.createPacket(direction, packetId, protocolVersion);
+        // Single O(1) lookup: decode when registered, otherwise relay the frame verbatim.
+        ProtocolData.Entry entry = protocol.getData(direction).getEntry(packetId, protocolVersion);
+        if (entry != null) {
+            DefinedPacket packet = entry.constructor().get();
             packet.read(in, protocolVersion);
             out.add(packet);
         } else {
-            // Unknown packet for the current state: relay the frame verbatim.
             in.resetReaderIndex();
             out.add(in.retain());
         }
