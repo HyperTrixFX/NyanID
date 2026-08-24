@@ -41,6 +41,7 @@ public class QbotServices {
 
     @PostConstruct
     public void initQbot() {
+        if(IsEnable){
         Starter starter = new Starter(appid, secret);
         starter.getConfig().setCode(Intents.PUBLIC_INTENTS.and(Intents.GROUP_INTENTS));
         starter.run();
@@ -62,6 +63,9 @@ public class QbotServices {
 //                log.warn(msg.getString("content"));
             }
         });
+    }else log.warn("Qbot已在配置文件中被关闭。");
+
+
     }
 
 

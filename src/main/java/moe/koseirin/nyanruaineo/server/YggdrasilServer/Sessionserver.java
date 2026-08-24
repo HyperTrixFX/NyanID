@@ -6,6 +6,7 @@ package moe.koseirin.nyanruaineo.server.YggdrasilServer;
  * awa
  */
 
+import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import jakarta.servlet.http.HttpServletRequest;
 import moe.koseirin.nyanruaineo.server.YggdrasilServer.Authserver.Json.CharacterInformationJson;
@@ -41,6 +42,7 @@ public class Sessionserver {
     private final RedisService redisService;
     private final StrictIpResolver strictIpResolver;
     private final Respond respond;
+    private final YggdrasilAuthService yggdrasilAuthService;
 
     @Value("${yggdrasil.APILocation}")
     private String APILocation;
@@ -48,7 +50,7 @@ public class Sessionserver {
     @Value("${yggdrasil.privateKey}")
     private String privateKey;
 
-    public Sessionserver(YggdrasilRepository yggdrasilRepository, YggdrasilPlayerRepository yggdrasilPlayerRepository, UserDevicesRepository userDevicesRepository, utilset utilset, RedisService redisService, StrictIpResolver strictIpResolver, Respond respond) {
+    public Sessionserver(YggdrasilRepository yggdrasilRepository, YggdrasilPlayerRepository yggdrasilPlayerRepository, UserDevicesRepository userDevicesRepository, utilset utilset, RedisService redisService, StrictIpResolver strictIpResolver, Respond respond, YggdrasilAuthService yggdrasilAuthService) {
         this.yggdrasilRepository = yggdrasilRepository;
         this.yggdrasilPlayerRepository = yggdrasilPlayerRepository;
         this.userDevicesRepository = userDevicesRepository;
@@ -56,6 +58,7 @@ public class Sessionserver {
         this.redisService = redisService;
         this.strictIpResolver = strictIpResolver;
         this.respond = respond;
+        this.yggdrasilAuthService = yggdrasilAuthService;
     }
 
     @PostMapping("join")
@@ -115,53 +118,22 @@ public class Sessionserver {
             return respond.respond(MediaType.APPLICATION_JSON, 403, new ErrorResponse("你请求的内容为NULL杂鱼喵!", "The parameter is incorrect", "The parameter is incorrect 杂鱼喵~"));
         }
 
-        Object sessionObj = redisService.getValue(serverId);
-        if (sessionObj == null) {
+        // Shared internal (non-HTTP) verification: the proxy calls the same service directly.
+        JSONObject profile = yggdrasilAuthService.hasJoined(username, serverId);
+        if (profile == null) {
             return respond.respond(MediaType.APPLICATION_JSON, 403, new ErrorResponse("无效的会话杂鱼喵!", "ForbiddenOperationException", "ForbiddenOperationException"));
         }
-
-        JSONObject sessionData = JSONObject.parseObject(sessionObj.toString());
-        redisService.deleteValue(serverId);
-
-        String accessToken = sessionData.getString("accessToken");
-        String nuid = userDevicesRepository.findUidByToken(accessToken);
-        if (nuid == null) {
-            return respond.respond(MediaType.APPLICATION_JSON, 403, new ErrorResponse("无效的会话杂鱼喵!", "ForbiddenOperationException", "ForbiddenOperationException"));
-        }
-
-        String mcUuid = yggdrasilRepository.GetPlayerUUID(nuid);
-        String mcName = yggdrasilRepository.GetPlayerNAME(nuid);
-        if (!username.equals(mcName)) {
-            return respond.respond(MediaType.APPLICATION_JSON, 403, new ErrorResponse("无效的会话杂鱼喵!", "ForbiddenOperationException", "ForbiddenOperationException"));
-        }
-
-        Yggdrasil yggdrasil = yggdrasilRepository.YggdrasilPlayer(mcUuid);
-        String model = (yggdrasilPlayerRepository.getSkinTexturesType(mcUuid) == 1) ? "default" : "slim";
-
-        JSONObject texturesJson = new JSONObject();
-        texturesJson.put("timestamp", System.currentTimeMillis());
-        texturesJson.put("profileId", mcUuid.replace("-", ""));
-        texturesJson.put("profileName", mcName);
-        texturesJson.put("signatureRequired", true);
-        JSONObject textures = new JSONObject();
-        texturesJson.put("textures", textures);
-
-        if (yggdrasil.getUseSkin()) {
-            TexturesJson.SkinTexture skin = new TexturesJson.SkinTexture(APILocation + "/api/zako/res/textures/" + yggdrasilPlayerRepository.getSkinTexturesHash(yggdrasil.getUuid()), new TexturesJson.TextureMetadata(model));
-            textures.put("SKIN", skin);
-        }
-        if (yggdrasil.getUseCAPE()) {
-            TexturesJson.SkinTexture cape = new TexturesJson.SkinTexture(APILocation + "/api/zako/res/textures/" + yggdrasilPlayerRepository.getCAPETexturesHash(yggdrasil.getUuid()), null);
-            textures.put("CAPE", cape);
-        }
-
-        byte[] textureBytes = Base64.getEncoder().encode(texturesJson.toString().getBytes());
-        String sign = utilset.sign(textureBytes, privateKey);
 
         List<Property> properties = new ArrayList<>();
-        properties.add(new Property("textures", Base64.getEncoder().encodeToString(texturesJson.toString().getBytes()), sign));
-
-        return ResponseEntity.ok(new CharacterInformationJson(yggdrasil.getUuid().replace("-", ""), yggdrasil.getPlayername(), properties));
+        JSONArray profileProperties = profile.getJSONArray("properties");
+        if (profileProperties != null) {
+            for (int i = 0; i < profileProperties.size(); i++) {
+                JSONObject prop = profileProperties.getJSONObject(i);
+                properties.add(new Property(prop.getString("name"), prop.getString("value"),
+                        prop.containsKey("signature") ? prop.getString("signature") : null));
+            }
+        }
+        return ResponseEntity.ok(new CharacterInformationJson(profile.getString("id"), profile.getString("name"), properties));
     }
 
     @GetMapping({"profile/{uuid}", "profile/*", "profile"})

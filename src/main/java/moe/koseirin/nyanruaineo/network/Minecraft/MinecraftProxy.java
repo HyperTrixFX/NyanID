@@ -20,9 +20,10 @@ import moe.koseirin.nyanruaineo.network.Minecraft.netty.HandlerBoss;
 import moe.koseirin.nyanruaineo.network.Minecraft.netty.PipelineUtils;
 import moe.koseirin.nyanruaineo.network.Minecraft.protocol.packet.TabListHeaderFooter;
 import moe.koseirin.nyanruaineo.network.Minecraft.service.BackendServerManager;
-import moe.koseirin.nyanruaineo.network.Minecraft.service.MojangAuthService;
 import moe.koseirin.nyanruaineo.network.Minecraft.service.PingResponseProvider;
+import moe.koseirin.nyanruaineo.network.Minecraft.service.PlayerAuthService;
 import moe.koseirin.nyanruaineo.network.Minecraft.service.PlayerMessageService;
+import moe.koseirin.nyanruaineo.network.Minecraft.service.PlayerStateService;
 import moe.koseirin.nyanruaineo.network.Minecraft.service.TabListService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -39,7 +40,7 @@ public class MinecraftProxy {
     @Getter
     private final ProxyProperties properties;
     @Getter
-    private final MojangAuthService mojangAuthService;
+    private final PlayerAuthService playerAuthService;
     @Getter
     private final PingResponseProvider pingResponseProvider;
     @Getter
@@ -50,6 +51,8 @@ public class MinecraftProxy {
     private final TabListService tabListService;
     @Getter
     private final PlayerMessageService playerMessageService;
+    @Getter
+    private final PlayerStateService playerStateService;
 
     @Value("${NyanidSetting.EnableProxy:false}")
     private boolean enableProxy;
@@ -67,19 +70,21 @@ public class MinecraftProxy {
     private final java.util.Set<UserConnection> onlineUsers = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
     public MinecraftProxy(ProxyProperties properties,
-                          MojangAuthService mojangAuthService,
+                          PlayerAuthService playerAuthService,
                           PingResponseProvider pingResponseProvider,
                           BackendServerManager backendServerManager,
                           EventBus eventBus,
                           TabListService tabListService,
-                          PlayerMessageService playerMessageService) {
+                          PlayerMessageService playerMessageService,
+                          PlayerStateService playerStateService) {
         this.properties = properties;
-        this.mojangAuthService = mojangAuthService;
+        this.playerAuthService = playerAuthService;
         this.pingResponseProvider = pingResponseProvider;
         this.backendServerManager = backendServerManager;
         this.eventBus = eventBus;
         this.tabListService = tabListService;
         this.playerMessageService = playerMessageService;
+        this.playerStateService = playerStateService;
     }
 
     @PostConstruct
@@ -163,7 +168,7 @@ public class MinecraftProxy {
                     onlineUsers.remove(player);
                     continue;
                 }
-                TabListHeaderFooter header = tabListService.buildHeaderFooter(player.getProtocolVersion(), count);
+                TabListHeaderFooter header = tabListService.buildHeaderFooter(player, count);
                 if (header != null) {
                     player.sendPacket(header);
                 }
