@@ -33,6 +33,9 @@ public class AIServices {
     @Value("${ai.provider:ollama}")
     private String provider;
 
+    @Value("${ai.enable}")
+    private boolean enable;
+
     @Value("${ollama.url:http://localhost:11434/api/chat}")
     private String ollamaUrl;
     @Value("${ollama.model:qwen3.5:9b}")
@@ -96,58 +99,61 @@ public class AIServices {
     }
 
     public String chat(String sessionId, String userMessage,String username) {
-        List<ChatMessage> history = getHistory(sessionId);
+        if (enable) {
+            List<ChatMessage> history = getHistory(sessionId);
 
-        history.addFirst(new ChatMessage("system", SYSTEM_PROMPT.romyu.getPROMPT()));
+            history.addFirst(new ChatMessage("system", SYSTEM_PROMPT.romyu.getPROMPT()));
 
-        String userInfo = String.format(
-                "当前用户信息：用户名=%s, 昵称=%s, 是否管理员=%s。当前时间：%s。",
-                username,
-                username,
-                isAdmin(),
-                LocalDateTime.now()
-        );
-        String combinedUserMessage = userInfo + "\n" + userMessage;
+            String userInfo = String.format(
+                    "当前用户信息：用户名=%s, 昵称=%s, 是否管理员=%s。当前时间：%s。",
+                    username,
+                    username,
+                    isAdmin(),
+                    LocalDateTime.now()
+            );
+            String combinedUserMessage = userInfo + "\n" + userMessage;
 
-        ChatMessage currentUserMsg = new ChatMessage("user", combinedUserMessage);
-        history.add(currentUserMsg);
+            ChatMessage currentUserMsg = new ChatMessage("user", combinedUserMessage);
+            history.add(currentUserMsg);
 
-        try {
-            JSONObject firstResponse = callAI(history, true);
-            ChatMessage assistantMsg = parseAssistantMessage(firstResponse);
+            try {
+                JSONObject firstResponse = callAI(history, true);
+                ChatMessage assistantMsg = parseAssistantMessage(firstResponse);
 
-            if (assistantMsg.getToolCalls() == null || assistantMsg.getToolCalls().isEmpty()) {
-                saveHistory(sessionId, currentUserMsg, assistantMsg);
-                return assistantMsg.getContent();
-            }
-
-            history.add(assistantMsg);
-
-            for (ToolCall toolCall : assistantMsg.getToolCalls()) {
-                String toolName = toolCall.getFunction().getName();
-                Map<String, Object> args = convertArgsToMap(toolCall.getFunction().getArguments());
-
-                String toolResult = executeTool(toolName, args);
-                ChatMessage toolMsg = new ChatMessage("tool", toolResult);
-                toolMsg.setToolCallId(toolCall.getId());
-                if (!"deepseek".equalsIgnoreCase(provider)) {
-                    toolMsg.setToolName(toolName);
+                if (assistantMsg.getToolCalls() == null || assistantMsg.getToolCalls().isEmpty()) {
+                    saveHistory(sessionId, currentUserMsg, assistantMsg);
+                    return assistantMsg.getContent();
                 }
-                history.add(toolMsg);
+
+                history.add(assistantMsg);
+
+                for (ToolCall toolCall : assistantMsg.getToolCalls()) {
+                    String toolName = toolCall.getFunction().getName();
+                    Map<String, Object> args = convertArgsToMap(toolCall.getFunction().getArguments());
+
+                    String toolResult = executeTool(toolName, args);
+                    ChatMessage toolMsg = new ChatMessage("tool", toolResult);
+                    toolMsg.setToolCallId(toolCall.getId());
+                    if (!"deepseek".equalsIgnoreCase(provider)) {
+                        toolMsg.setToolName(toolName);
+                    }
+                    history.add(toolMsg);
+                }
+
+                JSONObject secondResponse = callAI(history, false);
+                ChatMessage finalAssistantMsg = parseAssistantMessage(secondResponse);
+
+                saveHistory(sessionId, currentUserMsg, finalAssistantMsg);
+                return finalAssistantMsg.getContent();
+
+            } catch (Exception e) {
+                ChatMessage errorAssistantMsg = new ChatMessage("assistant", "抱歉，系统出现错误。");
+                saveHistory(sessionId, currentUserMsg, errorAssistantMsg);
+                e.printStackTrace();
+                return "抱歉，系统出现错误。";
             }
+        }else return "未启用AIChat服务喵~";
 
-            JSONObject secondResponse = callAI(history, false);
-            ChatMessage finalAssistantMsg = parseAssistantMessage(secondResponse);
-
-            saveHistory(sessionId, currentUserMsg, finalAssistantMsg);
-            return finalAssistantMsg.getContent();
-
-        } catch (Exception e) {
-            ChatMessage errorAssistantMsg = new ChatMessage("assistant", "抱歉，系统出现错误。");
-            saveHistory(sessionId, currentUserMsg, errorAssistantMsg);
-            e.printStackTrace();
-            return "抱歉，系统出现错误。";
-        }
     }
 
     //统一入口
