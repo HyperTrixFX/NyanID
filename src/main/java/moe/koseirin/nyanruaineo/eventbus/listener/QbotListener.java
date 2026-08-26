@@ -17,9 +17,9 @@ import moe.koseirin.nyanruaineo.entity.NyanIDuser;
 import moe.koseirin.nyanruaineo.eventbus.Interface.EventHeader;
 import moe.koseirin.nyanruaineo.eventbus.SysEvent.QbotFriendMessageReceivedEvent;
 import moe.koseirin.nyanruaineo.eventbus.SysEvent.QbotGroupMessageReceivedEvent;
-import moe.koseirin.nyanruaineo.network.Minecraft.MinecraftProxy;
-import moe.koseirin.nyanruaineo.network.Minecraft.service.PlayerQueryService;
-import moe.koseirin.nyanruaineo.network.Minecraft.service.ServerStatusService;
+import moe.koseirin.nyanruaineo.Minecraft.MinecraftProxy;
+import moe.koseirin.nyanruaineo.Minecraft.service.PlayerQueryService;
+import moe.koseirin.nyanruaineo.Minecraft.service.ServerStatusService;
 import moe.koseirin.nyanruaineo.services.AIServices;
 import org.springframework.stereotype.Component;
 
