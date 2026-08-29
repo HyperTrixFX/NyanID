@@ -23,16 +23,19 @@ public interface AccountsRepository extends JpaRepository<Accounts, String>, Ser
     @Query(value = "SELECT a FROM Accounts a WHERE a.uid = ?1 or a.email = ?1 or a.username = ?1 or a.bind = ?1 or a.MicrosoftAccount = ?1")
     Accounts GetUser(String info);
 
-    @Query(value = "SELECT uid FROM Accounts WHERE uid = ?1 or email = ?1 or username = ?1")
+    @Query(value = "SELECT a FROM Accounts a WHERE a.MicrosoftAccount = ?1")
+    Accounts GetMicrosoftUser(String id);
+
+    @Query(value = "SELECT uid FROM Accounts WHERE uid = ?1 and isActive = true  or email = ?1 or username = ?1")
     Accounts find(String info);
 
-    @Query(value = "SELECT email FROM Accounts WHERE uid = ?1")
+    @Query(value = "SELECT email FROM Accounts WHERE uid = ?1 and isActive = true ")
     String GetEmailByUid(String uid);
 
-    @Query(value = "SELECT uid FROM Accounts WHERE email = ?1")
+    @Query(value = "SELECT uid FROM Accounts WHERE email = ?1 and isActive = true ")
     String findByEmail(String email);
 
-    @Query(value = "SELECT password FROM Accounts WHERE email = ?1")
+    @Query(value = "SELECT password FROM Accounts WHERE email = ?1 and isActive = true ")
     String LoginByEmail(String email);
 
     @Query(value = "SELECT COUNT(*) AS nums FROM Accounts ")
@@ -41,27 +44,27 @@ public interface AccountsRepository extends JpaRepository<Accounts, String>, Ser
 
     @Modifying
     @Transactional
-    @Query(value = "update Accounts set username = ?1 where uid = ?2")
+    @Query(value = "update Accounts set username = ?1 where uid = ?2 and isActive = true ")
     void UpdateUsername(String username,String uid);
 
     @Modifying
     @Transactional
-    @Query(value = "update Accounts set SecretKey = ?1 where uid = ?2")
+    @Query(value = "update Accounts set SecretKey = ?1 where uid = ?2 and isActive = true ")
     void UpdateSecretKey(String SecretKey,String uid);
 
     @Modifying
     @Transactional
-    @Query(value = "update Accounts set SecretKey = null where uid = ?1")
+    @Query(value = "update Accounts set SecretKey = null where uid = ?1 and isActive = true ")
     void DeleteSecretKey(String uid);
 
     @Modifying
     @Transactional
-    @Query(value = "update Accounts set bind = ?1 where uid = ?2")
+    @Query(value = "update Accounts set bind = ?1 where uid = ?2 and isActive = true ")
     void BindMinecraftAccount(String uuid,String uid);
 
     @Modifying
     @Transactional
-    @Query(value = "update Accounts set password = ?2 where uid = ?1")
+    @Query(value = "update Accounts set password = ?2 where uid = ?1 and isActive = true")
     void UpdatePassword(String uid,String pwd);
 
     @Query("SELECT u FROM Accounts u " +

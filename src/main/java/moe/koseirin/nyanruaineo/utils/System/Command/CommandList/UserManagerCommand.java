@@ -38,7 +38,7 @@ public class UserManagerCommand implements Command {
 
 
 
-    private static Logger logger = Logger.getLogger("NyanID");
+    private static final Logger logger = Logger.getLogger("NyanID");
     private final utilset utilset;
 
     public UserManagerCommand(AccountsRepository accountsRepository, BanUserRepository banUserRepository, BanUserService banUserService, utilset utilset) {

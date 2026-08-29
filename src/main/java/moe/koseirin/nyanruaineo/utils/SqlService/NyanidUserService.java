@@ -5,14 +5,12 @@ package moe.koseirin.nyanruaineo.utils.SqlService;
  * awa
  */
 
-/*
- * @author KoseiRin_
- * awa
- */
 
 import moe.koseirin.nyanruaineo.entity.NyanIDuser;
 
 public interface NyanidUserService {
 
     NyanIDuser save(NyanIDuser nyanIDuser);
+    String getUserByUid(String uid);
+    String findUsersByNickname(String nickname);
 }

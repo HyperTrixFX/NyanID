@@ -7,6 +7,7 @@ package moe.koseirin.nyanruaineo.API;
  */
 
 import lombok.SneakyThrows;
+import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ContextClosedEvent;
@@ -91,7 +92,7 @@ public class PluginLoader implements  ApplicationListener<ContextClosedEvent>, I
 
     @SneakyThrows
     @Override
-    public void onApplicationEvent(ContextClosedEvent event) {
+    public void onApplicationEvent(@NonNull ContextClosedEvent event) {
         Objects.requireNonNull(getPlugin(getUrls())).onDisable();
     }
 

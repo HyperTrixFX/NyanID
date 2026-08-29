@@ -5,13 +5,9 @@ package moe.koseirin.nyanruaineo.utils.System.Command.CommandList;
  * awa
  */
 
-/*
- * @author KoseiRin_
- * awa
- */
-
 import moe.koseirin.nyanruaineo.utils.System.Command.Command;
 import moe.koseirin.nyanruaineo.utils.System.Command.CommandManager;
+import org.springframework.stereotype.Component;
 
 import java.util.logging.Logger;
 

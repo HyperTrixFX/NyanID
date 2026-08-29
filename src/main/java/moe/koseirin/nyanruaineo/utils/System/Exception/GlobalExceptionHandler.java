@@ -7,19 +7,10 @@ package moe.koseirin.nyanruaineo.utils.System.Exception;
  */
 
 
-/*
- * @author KoseiRin_
- * awa
- */
-
-
-/*
- * @author KoseiRin_
- * awa
- */
-
+import lombok.extern.slf4j.Slf4j;
 import moe.koseirin.nyanruaineo.utils.Respond;
 import org.hibernate.exception.ConstraintViolationException;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -32,6 +23,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
@@ -40,6 +32,8 @@ import org.springframework.web.servlet.NoHandlerFoundException;
 import javax.naming.ServiceUnavailableException;
 import java.time.LocalDateTime;
 
+
+@Slf4j
 @ControllerAdvice
 public class GlobalExceptionHandler {
     private final Respond respond;
@@ -91,8 +85,12 @@ public class GlobalExceptionHandler {
                 Res("Constraint validation failed", LocalDateTime.now(), "ConstraintViolationException"));
     }
 
+    @ResponseStatus(HttpStatus.NOT_FOUND)
     @ExceptionHandler(NoHandlerFoundException.class)
-    public ResponseEntity<?> handleNoHandlerFound() {
+    public ResponseEntity<?> handleNoHandlerFound(NoHandlerFoundException ex) {
+        if (log.isDebugEnabled()) {
+            log.debug("No handler found for {} {}", ex.getHttpMethod(), ex.getRequestURL());
+        }
         return respond.respond(MediaType.APPLICATION_JSON, 404,
                 Res("No handler found for this request", LocalDateTime.now(), "NoHandlerFoundException"));
     }
@@ -150,7 +148,6 @@ public class GlobalExceptionHandler {
         return respond.respond(MediaType.APPLICATION_JSON, 503,
                 Res("Service is temporarily unavailable", LocalDateTime.now(), "ServiceUnavailableException"));
     }
-
 
 
 

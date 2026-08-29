@@ -32,6 +32,7 @@ import java.security.spec.X509EncodedKeySpec;
 import java.sql.Blob;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.Random;
 import java.util.UUID;
@@ -132,7 +133,7 @@ public class utilset {
     public String GetSessionUUID(HttpServletRequest request,String uid) {
         String sessionID = request.getSession().getId();
         String ip = strictIpResolver.getStrictClientIp(request);
-        byte[] bytes = (Base64.getEncoder().encode(sessionID.getBytes())+ip+uid).getBytes(StandardCharsets.UTF_8);
+        byte[] bytes = (Arrays.toString(Base64.getEncoder().encode(sessionID.getBytes())) +ip+uid).getBytes(StandardCharsets.UTF_8);
         return String.valueOf(UUID.nameUUIDFromBytes(bytes)).replace("-", "");
     }
 
@@ -365,7 +366,7 @@ public class utilset {
             out = new FileOutputStream(toImagePath);
             ImageIO.write(tag, "png", out);
         }catch(Exception e){
-            e.printStackTrace();
+            log.error(e.getMessage());
         }finally{
             if(out != null){
                 out.close();

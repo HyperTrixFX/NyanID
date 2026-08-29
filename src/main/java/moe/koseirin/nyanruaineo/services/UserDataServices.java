@@ -133,7 +133,7 @@ public class UserDataServices {
         if (accounts == null) {
             return respond.respond(MediaType.APPLICATION_JSON,500, "message","未知登录绕过喵！！！","timestamp", LocalDateTime.now());
         }
-        NyanIDuser nyanIDuser = nyanIDuserRepository.getUser(accounts.getUid());;
+        NyanIDuser nyanIDuser = nyanIDuserRepository.getUser(accounts.getUid());
         return switch (action) {
             case 0 -> // 设置昵称
                     userDataImpl.handleUpdateNickname(nickname, nyanIDuser, accounts.getUid());

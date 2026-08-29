@@ -214,7 +214,7 @@ public class Authserver {
             return respond.respond(MediaType.APPLICATION_JSON, 403, new ErrorResponse("你请求的json中缺少重要参数requestUser杂鱼喵!", "The parameter is incorrect", "The parameter is incorrect 杂鱼喵~"));
         }
 
-        String decryptedToken = utilset.decrypt(json.getString("accessToken"), privateKey);
+        String decryptedToken = utilset.decrypt(json.getString("accessToken"), privateKey);  
         boolean IsSelectedProfile = json.containsKey("selectedProfile");
 
         if (json.containsKey("clientToken")) {

@@ -210,7 +210,7 @@ public class Textures {
                             Infile[20], Infile[21], Infile[22], Infile[23], Infile[24], Infile[25], Infile[26], Infile[27], Infile[28]};
                     CRC32 crc32 = new CRC32();
                     crc32.update(GetCal);
-                    return Long.toHexString(crc32.getValue()).toUpperCase().equals(bytesToHex(CRC).toUpperCase());
+                    return Long.toHexString(crc32.getValue()).equalsIgnoreCase(bytesToHex(CRC));
                 } else return false;
             } else {
                 return false;

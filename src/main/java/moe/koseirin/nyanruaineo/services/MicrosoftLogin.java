@@ -1,7 +1,7 @@
 package moe.koseirin.nyanruaineo.services;
 
 import com.alibaba.fastjson2.JSONObject;
-import io.micrometer.core.instrument.binder.okhttp3.OkHttpContext;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import moe.koseirin.nyanruaineo.entity.Accounts;
@@ -10,7 +10,6 @@ import moe.koseirin.nyanruaineo.entity.UserDevices;
 import moe.koseirin.nyanruaineo.repository.AccountsRepository;
 import moe.koseirin.nyanruaineo.repository.BanUserRepository;
 import moe.koseirin.nyanruaineo.repository.NyanIDuserRepository;
-import moe.koseirin.nyanruaineo.repository.UserDevicesRepository;
 import moe.koseirin.nyanruaineo.utils.RedisUtils.RedisService;
 import moe.koseirin.nyanruaineo.utils.Respond;
 import moe.koseirin.nyanruaineo.utils.SqlService.UserDevicesService;
@@ -90,27 +89,44 @@ public class MicrosoftLogin {
         if(!respon.isSuccessful()){
             response.sendRedirect(HOST+"/#/login?error=401");
         }
-        JSONObject json = JSONObject.parseObject(respon.body().string());
-        //
-        Request req1 = new Request.Builder()
-                .url("https://graph.microsoft.com/v1.0/me")
-                .header("Authorization", "Bearer "+ json.getString("access_token")).build();
-        Response respon1 = client.newCall(req1).execute();
-        if (!respon1.isSuccessful()){
-            response.sendRedirect(HOST+"/#/login?error=401");
+        JSONObject json = null;
+        if (respon.body() != null) {
+            json = JSONObject.parseObject(respon.body().string());
         }
-
-
         //
-        JSONObject USER = JSONObject.parseObject(respon1.body().string());
-        String ocid = USER.getString("id");
-        String nickname = USER.getString("surname")+USER.getString("givenName");
-        String mail = USER.getString("mail");
-        if (accountsRepository.GetUser(ocid) == null){
+        Request req1 = null;
+        if (json != null) {
+            req1 = new Request.Builder()
+                    .url("https://graph.microsoft.com/v1.0/me")
+                    .header("Authorization", "Bearer "+ json.getString("access_token")).build();
+        }
+        Response respon1 = null;
+        if (req1 != null) {
+            respon1 = client.newCall(req1).execute();
+        }
+        if (respon1 != null && !respon1.isSuccessful()) {
+            response.sendRedirect(HOST + "/#/login?error=401");
+        }
+        //
+        JSONObject USER = null;
+        if (respon1 != null && respon1.body() != null) {
+            USER = JSONObject.parseObject(respon1.body().string());
+        }
+        String ocid = null;
+        if (USER != null) {
+            ocid = USER.getString("id");
+        }
+        if (USER != null) {
+            String nickname = USER.getString("surname")+USER.getString("givenName");
+        }
+        if (USER != null) {
+            String mail = USER.getString("mail");
+        }
+        Accounts accounts = accountsRepository.GetMicrosoftUser(ocid);
+        if (accounts == null){
             response.sendRedirect(HOST+"/#/login?error=4011");
-            return null;
+//            return ResponseEntity.ok(USER);
         }
-        Accounts accounts = accountsRepository.GetUser(ocid);
         // Check if user is banned
         BanUserList banUserList = banUserRepository.LEVE450TRUE(accounts.getUid());
         if (banUserList != null) {
@@ -139,7 +155,7 @@ public class MicrosoftLogin {
         UserDevices userDevices = new UserDevices();
         userDevices.setUid(accounts.getUid());
         userDevices.setDeviceID("null");
-        userDevices.setDeviceName("WEB (Microsoft)");
+        userDevices.setDeviceName("Microsoft");
         userDevices.setToken(token);
         userDevices.setIp(strictIpResolver.getStrictClientIp(request));
         userDevices.setIsActive(true);
@@ -149,10 +165,18 @@ public class MicrosoftLogin {
         userDevices.setCreateTime(LocalDateTime.now());
         // Save the new device information to the database
         userDevicesService.save(userDevices);
-        respon1.close();
+        if (respon1 != null) {
+            respon1.close();
+        }
         respon.close();
-
-        return respond.respond(MediaType.APPLICATION_JSON, 200, "have2fa", false, "access_token", utilset.encrypt(token, publicKey), "timestamp",LocalDateTime.now());
+        Cookie cookie = new Cookie("access_token", utilset.encrypt(token, publicKey));
+        cookie.setPath("/");
+        cookie.setDomain(HOST.replace("http://", "").replace("https://", "").replaceAll(":\\d+", "").replace("/", ""));
+        cookie.setMaxAge(7 * 24 * 60 * 60);
+        response.addCookie(cookie);
+        response.sendRedirect(HOST + "/#/");
+        return null;
+//        return respond.respond(MediaType.APPLICATION_JSON, 200, "have2fa", false, "access_token", utilset.encrypt(token, publicKey), "timestamp",LocalDateTime.now());
 //        return respond.respond(MediaType.APPLICATION_JSON, 200,"respon_s",JSONObject.parseObject(respon1.body().string()));
         //return null;
         //        response.sendRedirect(HOST+"/login?access_token="+access_token);
@@ -187,7 +211,9 @@ public class MicrosoftLogin {
             json.put("message","An error occurred while accessing the Microsoft API.");
             json.put("timestamp", LocalDateTime.now());
         }
-        json = JSONObject.parseObject(respon.body().string());
+        if (respon.body() != null) {
+            json = JSONObject.parseObject(respon.body().string());
+        }
         return json;
     }
 }
