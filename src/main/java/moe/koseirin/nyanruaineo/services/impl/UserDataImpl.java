@@ -1,6 +1,11 @@
 package moe.koseirin.nyanruaineo.services.impl;
 
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.AllArgsConstructor;
+import moe.koseirin.nyanruaineo.Minecraft.MinecraftProxy;
+import moe.koseirin.nyanruaineo.Minecraft.connection.UserConnection;
+import moe.koseirin.nyanruaineo.Minecraft.service.PlayerMessageService;
+import moe.koseirin.nyanruaineo.Minecraft.service.PlayerQueryService;
 import moe.koseirin.nyanruaineo.NyanIdApplication;
 import moe.koseirin.nyanruaineo.entity.Accounts;
 import moe.koseirin.nyanruaineo.entity.NyanIDuser;
@@ -40,9 +45,12 @@ public class UserDataImpl {
     private final StrictIpResolver strictIpResolver;
     private final utilset utilset;
     private final Respond respond;
+    private final PlayerQueryService playerQueryService;
+    private final PlayerMessageService playerMessageService;
 
 
-    public UserDataImpl(NyanIDuserRepository nyanIDuserRepository, UserDevicesRepository userDevicesRepository, YggdrasilRepository yggdrasilRepository, AccountsRepository accountsRepository, EmailService emailService, RedisService redisService, StrictIpResolver strictIpResolver, utilset utilset, Respond respond) {
+
+    public UserDataImpl(NyanIDuserRepository nyanIDuserRepository, UserDevicesRepository userDevicesRepository, YggdrasilRepository yggdrasilRepository, AccountsRepository accountsRepository, EmailService emailService, RedisService redisService, StrictIpResolver strictIpResolver, utilset utilset, Respond respond, MinecraftProxy minecraftProxy, PlayerQueryService playerQueryService, PlayerMessageService playerMessageService) {
         this.nyanIDuserRepository = nyanIDuserRepository;
         this.userDevicesRepository = userDevicesRepository;
         this.yggdrasilRepository = yggdrasilRepository;
@@ -52,6 +60,8 @@ public class UserDataImpl {
         this.strictIpResolver = strictIpResolver;
         this.utilset = utilset;
         this.respond = respond;
+        this.playerQueryService = playerQueryService;
+        this.playerMessageService = playerMessageService;
     }
 
     // 处理昵称更新
@@ -136,29 +146,33 @@ public class UserDataImpl {
 
     // 处理Minecraft绑定
     public ResponseEntity<?> handleBindMinecraft(String bindCode, Accounts account) {
+        //验证绑定码
+        if (bindCode == null || bindCode.isEmpty()) {
+            return respond.respond(MediaType.APPLICATION_JSON, 403, "message", "Code is invalid MiaoWu~", "timestamp", LocalDateTime.now());
+        }
 
-        // 验证绑定码
-//        if (bindCode == null || bindCode.isEmpty()) {
-//            return respond.respond(MediaType.APPLICATION_JSON, 403, "message", "Code is invalid MiaoWu~", "timestamp", LocalDateTime.now());
-//        }
-//
-//        Object uuidObject = redisService.getValue(bindCode);
-//        if (uuidObject == null) {
-//            return respond.respond(MediaType.APPLICATION_JSON, 404, "message", "无效的绑定码杂鱼喵~", "timestamp", LocalDateTime.now());
-//        }
-//
-//        String uuid = uuidObject.toString();
+        Object uuidObject = redisService.getValue(bindCode);
+        if (uuidObject == null) {
+            return respond.respond(MediaType.APPLICATION_JSON, 404, "message", "无效的绑定码杂鱼喵~", "timestamp", LocalDateTime.now());
+        }
 
-        // 绑定Minecraft账号
-//        accountsRepository.BindMinecraftAccount(uuid, account.getUid());
-//        redisService.deleteValue(bindCode);
-
-        // 发送BungeeCord消息
-//        S01Packet packet = new S01Packet(uuid, account.getUid());
-//        bungeeWebSocketHandler.broadcastPacket(packet);
-//        return respond.respond(MediaType.APPLICATION_JSON, 200, "message", "绑定成功喵~, uuid: " + uuid, "timestamp", LocalDateTime.now());
-    return ResponseEntity.ok().build();
-
+        String uuid = uuidObject.toString();
+        if (accountsRepository.GetUser(uuid.replace("-","")) != null){
+            return respond.respond(MediaType.APPLICATION_JSON, 401, "message", "该Minecraft账号已被绑定喵～", "timestamp", LocalDateTime.now());
+        }
+        if (accountsRepository.GetBindByUid(account.getUid()) != null){
+            return respond.respond(MediaType.APPLICATION_JSON, 401, "message", "您已绑定过账号喵～", "timestamp", LocalDateTime.now());
+        }
+        //绑定Minecraft账号
+        accountsRepository.BindMinecraftAccount(uuid.replace("-",""), account.getUid());
+        redisService.deleteValue(bindCode);
+        redisService.deleteValue(uuidObject +"BindAccount");
+        UserConnection playerInfo =  playerQueryService.getUserConnectionByUUID(uuid);
+        if (playerInfo != null){
+            playerMessageService.sendMessage(playerInfo.getServer().getUser(), "§5§l小鳥遊ホシノ §b§l»§l§6绑定成功喵～您的NyanID为:"+account.getUid());
+            return respond.respond(MediaType.APPLICATION_JSON, 200, "message", "绑定成功喵~, uuid: " + playerInfo.getUuid(), "timestamp", LocalDateTime.now());
+        }
+        return respond.respond(MediaType.APPLICATION_JSON, 200, "message", "绑定成功喵~, uuid: " + uuid, "timestamp", LocalDateTime.now());
     }
 
     // 处理头像模式切换

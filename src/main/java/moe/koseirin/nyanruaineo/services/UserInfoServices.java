@@ -12,6 +12,7 @@ import moe.koseirin.nyanruaineo.dto.BanUserListJson;
 import moe.koseirin.nyanruaineo.utils.Respond;
 import moe.koseirin.nyanruaineo.utils.SqlService.impl.BanUserServiceImpl;
 import moe.koseirin.nyanruaineo.utils.SqlService.impl.UserServiceImpl;
+import moe.koseirin.nyanruaineo.utils.System.PermissionNodes;
 import moe.koseirin.nyanruaineo.utils.utilset;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
@@ -20,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
@@ -40,6 +42,7 @@ public class UserInfoServices {
     private final UserDevicesRepository userDevicesRepository;
     private final YggdrasilRepository yggdrasilRepository;
     private final BanUserServiceImpl banUserService;
+    private final PermissionService permissionService;
 
     @Value("${yggdrasil.APILocation}")
     private String APILocation;
@@ -47,7 +50,7 @@ public class UserInfoServices {
     @Value("${yggdrasil.privateKey}")
     private String  privateKey;
 
-    public UserInfoServices(NyanIDuserRepository nyanIDuserRepository, AccountsRepository accountsRepository, BanUserRepository banUserRepository, utilset utilset, UserServiceImpl userService1, Respond respond, UserPermissionsRepository userPermissionsRepository, UserDevicesRepository userDevicesRepository, YggdrasilRepository yggdrasilRepository, BanUserServiceImpl banUserService) {
+    public UserInfoServices(NyanIDuserRepository nyanIDuserRepository, AccountsRepository accountsRepository, BanUserRepository banUserRepository, utilset utilset, UserServiceImpl userService1, Respond respond, UserPermissionsRepository userPermissionsRepository, UserDevicesRepository userDevicesRepository, YggdrasilRepository yggdrasilRepository, BanUserServiceImpl banUserService, PermissionService permissionService) {
         this.nyanIDuserRepository = nyanIDuserRepository;
         this.accountsRepository = accountsRepository;
         this.banUserRepository = banUserRepository;
@@ -58,6 +61,7 @@ public class UserInfoServices {
         this.userDevicesRepository = userDevicesRepository;
         this.yggdrasilRepository = yggdrasilRepository;
         this.banUserService = banUserService;
+        this.permissionService = permissionService;
     }
 
     @Transactional
@@ -156,12 +160,13 @@ public class UserInfoServices {
             }else {
                 jsonObject.put("have2fa",false);
             }
-            if (userPermissionsRepository.getByUid(uid) != null){
-                UserPermissions userPermissions = userPermissionsRepository.getByUid(uid);
+            //TODO 用户权限
+            List<String> adminPermissions = Arrays.asList(PermissionNodes.ROOT, PermissionNodes.NYANID_ADMIN, PermissionNodes.PROXY_ADMIN);
+            if (adminPermissions.stream().anyMatch(p -> permissionService.hasPermission(uid, p))){
                 jsonObject.put("isAdmin",true);
-                jsonObject.put("akey",userPermissions.getAccessKey());
-                jsonObject.put("PermissionsLevel",userPermissions.getLevel());
-                jsonObject.put("UserGroup",userPermissions.getUserGroup());
+                jsonObject.put("akey","AAAAAAAAAAA");
+                jsonObject.put("PermissionsLevel",4);
+                jsonObject.put("UserGroup","root");
             }
             if (yggdrasilplayeruuid != null){
                 jsonObject.put("HasYggdrasilAccount",true);

@@ -1,4 +1,4 @@
-package moe.koseirin.nyanruaineo.Minecraft.service;
+package moe.koseirin.nyanruaineo.Minecraft.config.cfg;
 
 /*
  * @author KoseiRin_

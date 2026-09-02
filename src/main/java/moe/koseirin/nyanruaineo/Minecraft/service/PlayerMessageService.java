@@ -17,35 +17,34 @@ import org.springframework.stereotype.Component;
 import java.util.Collection;
 
 /**
- * Sends chat messages to proxied players and broadcasts them across every connected player
- * (BungeeCord {@code broadcast} style). Each player receives the message in the chat packet format
- * of their own protocol version: legacy Chat below 1.19, SystemChat (JSON or 1.20.3+ NBT) above.
+ * 向被代理的玩家发送聊天消息，并将消息广播给所有已连接的玩家。
+ * 每位玩家会以其自身协议版本所对应的聊天数据包格式接收消息：1.19 版本以下使用 Legacy Chat，
+ * 1.19 及以上版本使用 SystemChat（JSON 格式，1.20.3 以上则为 NBT 格式）。
  */
 @Slf4j
 @Component
 public class PlayerMessageService {
 
     /**
-     * Sends a chat message to one player in their version-appropriate chat format. Legacy
-     * {@code §} colour codes are converted into real JSON components (1.16+ clients no longer
-     * interpret them inside JSON text).
+     * 向单个玩家发送与其版本适配的聊天格式的消息。旧式的 {@code §} 颜色代码会被转换为真正的
+     * JSON 组件（1.16 及以上版本的客户端不再在 JSON 文本中解析它们）。
      */
     public void sendMessage(UserConnection user, String text) {
         sendComponent(user, ChatComponentUtils.component(text));
     }
 
     /**
-     * Sends a raw JSON chat component to one player in their version-appropriate chat format
-     * (BungeeCord {@code MessageRaw} style): the component is written verbatim, with no legacy
-     * colour-code conversion.
+     * 向单个玩家发送原始 JSON 聊天组件，使用与其版本适配的聊天格式
+     * 该组件会原样写入
+     * 不进行旧式颜色代码转换。
      */
     public void sendRaw(UserConnection user, JSONObject component) {
         sendComponent(user, component);
     }
 
     /**
-     * Sends the message to every player in the given set (e.g. the proxy's online players) and
-     * returns how many received it. Failed sends are logged and skipped.
+     * 向给定集合中的每位玩家（例如代理端的所有在线玩家）发送消息，
+     * 并返回成功接收的玩家数量。发送失败的情况会被记录日志并跳过。
      */
     public int broadcast(Collection<UserConnection> users, String text) {
         int sent = broadcastComponents(users, ChatComponentUtils.component(text));
@@ -54,14 +53,14 @@ public class PlayerMessageService {
     }
 
     /**
-     * Sends a raw JSON chat component to every player in the given set (BungeeCord
-     * {@code MessageRaw} style) and returns how many received it.
+     * 向给定集合中的每位玩家发送原始 JSON 聊天组件，
+     * 并返回成功接收的玩家数量。
      */
     public int broadcastRaw(Collection<UserConnection> users, JSONObject component) {
         return broadcastComponents(users, component);
     }
 
-    /** Shared broadcast core: sends one component to every (active) player of the set. */
+    /** 共享广播核心：向集合中的每个（活跃）玩家发送一个组件。 */
     private int broadcastComponents(Collection<UserConnection> users, JSONObject component) {
         int sent = 0;
         for (UserConnection user : users) {
@@ -79,8 +78,9 @@ public class PlayerMessageService {
     }
 
     /**
-     * Writes one JSON chat component in the chat packet format of the player's protocol version:
-     * legacy Chat below 1.19, SystemChat (JSON or 1.20.3+ NBT) above.
+     * 以玩家协议版本对应的聊天数据包格式写入一个 JSON 聊天组件：
+     * 1.19 以下使用旧版聊天包（Legacy Chat），1.19 及以上使用 SystemChat
+     * （JSON 格式，1.20.3 以上则为 NBT 格式）。
      */
     private void sendComponent(UserConnection user, JSONObject component) {
         if (user.getChannel() == null || !user.getChannel().isActive()) {
@@ -118,7 +118,7 @@ public class PlayerMessageService {
         user.getChannel().writeAndFlush(buf);
     }
 
-    /** Pre-1.19 clientbound Chat packet ids per protocol version (BungeeCord mappings). */
+    /** 1.19 之前各协议版本的客户端bound聊天数据包ID */
     private static int chatPacketId(int protocolVersion) {
         if (protocolVersion >= 755) {
             return 0x0F;                                               // 1.17-1.18.2
@@ -139,8 +139,8 @@ public class PlayerMessageService {
     }
 
     /**
-     * Clientbound SystemChat ids per protocol version (BungeeCord {@code TO_CLIENT SystemChat}
-     * mappings; versions without an entry inherit the nearest lower one).
+     * 按协议版本区分的客户端bound SystemChat数据包ID；
+     * 未明确列出条目的版本会继承相邻的较低版本）。
      */
     private static int systemChatId(int protocolVersion) {
         if (protocolVersion >= 775) {

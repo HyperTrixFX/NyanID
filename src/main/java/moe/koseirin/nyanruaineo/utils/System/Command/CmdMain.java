@@ -31,6 +31,7 @@ public class CmdMain {
     private final SystemctlCommand systemctlCommand;
     private final ReloadConfig reloadConfig;
     private final HelloCommand helloCommand;
+    private final OpCommand opCommand;
 
 
 
@@ -38,13 +39,14 @@ public class CmdMain {
     @Value("${NyanidSetting.EnableCommand}")
     private boolean EnableCommand;
 
-    public CmdMain(RedisCommand redisCommand, UserManagerCommand userManagerCommand, SystemctlCommand systemctlCommand, ReloadConfig reloadConfig, HelloCommand helloCommand) {
+    public CmdMain(RedisCommand redisCommand, UserManagerCommand userManagerCommand, SystemctlCommand systemctlCommand, ReloadConfig reloadConfig, HelloCommand helloCommand, OpCommand opCommand) {
         this.redisCommand = redisCommand;
         this.userManagerCommand = userManagerCommand;
         this.systemctlCommand = systemctlCommand;
 
         this.reloadConfig = reloadConfig;
         this.helloCommand = helloCommand;
+        this.opCommand = opCommand;
     }
 
     @PostConstruct
@@ -60,6 +62,7 @@ public class CmdMain {
             commandManager.registerCommand(redisCommand);
             commandManager.registerCommand(userManagerCommand);
             commandManager.registerCommand(reloadConfig);
+            commandManager.registerCommand(opCommand);
             //END Register
             Thread consoleThread = new Thread(new ConsoleInputHandler(commandManager));
             consoleThread.start();

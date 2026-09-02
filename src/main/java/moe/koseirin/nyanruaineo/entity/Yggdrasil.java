@@ -16,7 +16,7 @@ import lombok.Setter;
 public class Yggdrasil {
 
     @Id
-    @Column(columnDefinition="varchar(150)",nullable = false)
+    @Column(columnDefinition="varchar(36)",nullable = false)
     private String uuid;
 
     private Boolean useSkin;
@@ -26,7 +26,7 @@ public class Yggdrasil {
     @Column(columnDefinition="varchar(20)",nullable = false)
     private String playername;
 
-    @Column(columnDefinition="varchar(150)",nullable = false)
+    @Column(columnDefinition="varchar(32)",nullable = false)
     private String nyanuid;
 
     private int type;

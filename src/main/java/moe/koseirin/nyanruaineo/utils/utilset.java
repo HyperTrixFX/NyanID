@@ -269,7 +269,7 @@ public class utilset {
     /**
      * @param length 随机数长度
      */
-    public static String RandomNumber(int length) {
+    public String RandomNumber(int length) {
         String characters = "0123456789";
         StringBuilder flt = new StringBuilder();
         Random random = new Random();

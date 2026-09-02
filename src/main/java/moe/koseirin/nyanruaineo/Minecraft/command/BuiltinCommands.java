@@ -6,23 +6,31 @@ package moe.koseirin.nyanruaineo.Minecraft.command;
  */
 
 import jakarta.annotation.PostConstruct;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.UUID;
+
+import java.util.*;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import moe.koseirin.nyanruaineo.Minecraft.MinecraftProxy;
+import moe.koseirin.nyanruaineo.Minecraft.config.cfg.BackendServer;
+import moe.koseirin.nyanruaineo.Minecraft.config.cfg.ServerListConfig;
 import moe.koseirin.nyanruaineo.Minecraft.connection.ServerConnection;
 import moe.koseirin.nyanruaineo.Minecraft.connection.UserConnection;
-import moe.koseirin.nyanruaineo.Minecraft.service.BackendServer;
-import moe.koseirin.nyanruaineo.Minecraft.service.BackendServerManager;
-import moe.koseirin.nyanruaineo.Minecraft.service.PlayerKickService;
-import moe.koseirin.nyanruaineo.Minecraft.service.PlayerQueryService;
-import moe.koseirin.nyanruaineo.Minecraft.service.PlayerTransferService;
-import moe.koseirin.nyanruaineo.Minecraft.service.ServerStatusService;
+import moe.koseirin.nyanruaineo.Minecraft.protocol.packet.Kick;
+import moe.koseirin.nyanruaineo.Minecraft.service.*;
+import moe.koseirin.nyanruaineo.entity.BanUserList;
+import moe.koseirin.nyanruaineo.repository.AccountsRepository;
+import moe.koseirin.nyanruaineo.repository.YggdrasilRepository;
+import moe.koseirin.nyanruaineo.utils.RedisUtils.RedisService;
+import moe.koseirin.nyanruaineo.utils.System.PermissionNodes;
+import moe.koseirin.nyanruaineo.utils.utilset;
 import org.springframework.stereotype.Component;
+
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * 使用 {@link CommandManager} 注册代理自带的命令 ({@code /ping}、{@code /server}、{@code /broadcast}、
@@ -41,24 +49,44 @@ public class BuiltinCommands {
     private final PlayerKickService playerKickService;
     private final PlayerQueryService playerQueryService;
     private final ServerStatusService serverStatusService;
+    private final ProxyBanService proxyBanService;
+    private final YggdrasilRepository yggdrasilRepository;
+    private final AccountsRepository accountsRepository;
+
+    private static final Pattern DURATION_PATTERN = Pattern.compile("(?i)^(\\d+)([smhdw])$");
+    private final utilset utilset;
+    private final RedisService redisService;
 
     @PostConstruct
     public void register() {
-        commandManager.registerCommand(new ProxyCommand("ping") {
+        commandManager.registerCommand(new ProxyCommand("bind") {
             @Override
             public void execute(CommandSender sender, String[] args) {
-                sender.sendMessage("§aPong!");
+                handleBind(sender);
             }
         });
 
-        commandManager.registerCommand(new ProxyCommand("awa") {
+        commandManager.registerCommand(new ProxyCommand("lobby",null,"hub") {
             @Override
             public void execute(CommandSender sender, String[] args) {
-                sender.sendMessage("§lawa!");
+                UserConnection user = userOf(sender);
+                if (user == null) {
+                    return;
+                }
+                ServerConnection current = user.getServer();
+                ServerListConfig c = proxy.getProperties().getServerListConfig();
+                BackendServer target = backendServerManager.findByName(c.getDefaultServer());
+                if (current != null && !current.isClosed()
+                        && target.getHost() != null && target.getHost().equalsIgnoreCase(current.getHost())
+                        && target.getPort() == current.getPort()) {
+                    sender.sendMessage("§eYou are already connected to " + target.getName() + "!");
+                    return;
+                }
+                playerTransferService.transferIfOnline(user, target, sender::sendMessage);
             }
         });
 
-        commandManager.registerCommand(new ProxyCommand("ip") {
+        commandManager.registerCommand(new ProxyCommand("ip", PermissionNodes.COMMAND_IP) {
             @Override
             public void execute(CommandSender sender, String[] args) {
                 handleIp(sender, args);
@@ -77,7 +105,7 @@ public class BuiltinCommands {
             }
         });
 
-        commandManager.registerCommand(new ProxyCommand("server") {
+        commandManager.registerCommand(new ProxyCommand("server", PermissionNodes.COMMAND_SERVER) {
             @Override
             public void execute(CommandSender sender, String[] args) {
                 handleServer(sender, String.join(" ", args));
@@ -96,7 +124,7 @@ public class BuiltinCommands {
             }
         });
 
-        commandManager.registerCommand(new ProxyCommand("broadcast", null, "bc") {
+        commandManager.registerCommand(new ProxyCommand("broadcast", PermissionNodes.COMMAND_BROADCAST, "bc") {
             @Override
             public void execute(CommandSender sender, String[] args) {
                 String message = String.join(" ", args);
@@ -109,21 +137,40 @@ public class BuiltinCommands {
             }
         });
 
-        commandManager.registerCommand(new ProxyCommand("kick") {
+        commandManager.registerCommand(new ProxyCommand("kick", PermissionNodes.COMMAND_KICK) {
             @Override
             public void execute(CommandSender sender, String[] args) {
                 handleKick(sender, args);
             }
         });
 
-        commandManager.registerCommand(new ProxyCommand("list") {
+        commandManager.registerCommand(new ProxyCommand("ban", PermissionNodes.COMMAND_BAN) {
+            @Override
+            public void execute(CommandSender sender, String[] args) {
+                handleBan(sender, args);
+            }
+
+            @Override
+            public List<String> onTabComplete(CommandSender sender, String[] args) {
+                String prefix = args.length > 0 ? args[args.length - 1].toLowerCase(Locale.ROOT) : "";
+                List<String> matches = new ArrayList<>();
+                for (PlayerQueryService.PlayerInfo player : playerQueryService.getOnlinePlayers()) {
+                    if (player.username() != null && player.username().toLowerCase(Locale.ROOT).startsWith(prefix)) {
+                        matches.add(player.username());
+                    }
+                }
+                return matches;
+            }
+        });
+
+        commandManager.registerCommand(new ProxyCommand("list", PermissionNodes.COMMAND_LIST) {
             @Override
             public void execute(CommandSender sender, String[] args) {
                 handleList(sender);
             }
         });
 
-        commandManager.registerCommand(new ProxyCommand("status") {
+        commandManager.registerCommand(new ProxyCommand("status", PermissionNodes.COMMAND_STATUS) {
             @Override
             public void execute(CommandSender sender, String[] args) {
                 handleStatus(sender);
@@ -134,6 +181,32 @@ public class BuiltinCommands {
     private UserConnection userOf(CommandSender sender) {
         return sender instanceof PlayerCommandSender player ? player.getUser() : null;
     }
+
+    private void handleBind(CommandSender sender){
+        UserConnection user = userOf(sender);
+        if (user != null) {
+            String uid = yggdrasilRepository.findNyanUidByUuid(user.getUuid().toString());
+            if (uid != null) {
+                sender.sendMessage("§c你不再需要进行NyanID绑定");
+            }else {
+                if (accountsRepository.GetUidByBind(user.getUuid().toString().replace("-","")) != null){
+                    sender.sendMessage("§5§l小鳥遊ホシノ §b§l»§l§6该账号已被绑定!!");
+                }else {
+                if (redisService.getValue(user.getUuid().toString()+"BindAccount") == null){
+                    UUID uuid = user.getUuid();
+                    String BindCode = utilset.RandomNumber(6);
+                    sender.sendMessage("§5§l小鳥遊ホシノ §b§l»§l§6The binding code has been obtained, and your binding code is as follows:§c§l»"+BindCode+"§l§6This binding code is valid for 180 seconds!!");
+                    redisService.setValueWithExpiration(BindCode,uuid,180, TimeUnit.SECONDS);
+                    redisService.setValueWithExpiration(uuid +"BindAccount",true,180, TimeUnit.SECONDS);
+                }else {
+                    sender.sendMessage("§5§l小鳥遊ホシノ §b§l»§l§6You have submitted an account binding request within 180 seconds. Please try again after 180 seconds!!");
+                }
+                }
+            }
+        }
+    }
+
+
 
     /** {@code /ip [player]}：目标玩家的 IP，如果未提供名字，则为发送者自己的 IP。*/
     private void handleIp(CommandSender sender, String[] args) {
@@ -190,15 +263,10 @@ public class BuiltinCommands {
         playerTransferService.transferIfOnline(user, target, sender::sendMessage);
     }
 
-    /** 使用配置的踢出屏幕执行 {@code /kick <玩家> [原因]}。 */
+    /** 使用配置的踢出屏幕执行 {@code /kick <玩家> [原因]}。权限由 {@code minecraftproxy.command.kick} 控制。 */
     private void handleKick(CommandSender sender, String[] args) {
         UserConnection user = userOf(sender);
         if (user == null) {
-            return;
-        }
-        //TODO 只有配置的管理员可以踢出(未完成)。
-        if (!user.getUuid().equals(UUID.fromString("96c6500f-4c9c-4fd2-86a5-e633862022be"))) {
-            sender.sendMessage("§l§4权限不足喵~");
             return;
         }
 
@@ -215,8 +283,69 @@ public class BuiltinCommands {
             return;
         }
         String reason = parts.length > 1 && !parts[1].isBlank() ? parts[1].trim() : "Kicked by an operator";
-        playerKickService.kick(target, reason);
+        playerKickService.kick(target, reason,null);
         sender.sendMessage("§aKicked " + target.getUsername() + ".");
+    }
+
+    /** {@code /ban <玩家> [原因] [时长]}：封禁在线玩家（默认 type=5），时长如 30m/2h/7d，缺省为永久。 */
+    private void handleBan(CommandSender sender, String[] args) {
+        if (args.length == 0) {
+            sender.sendMessage("§cUsage: /ban <player> [reason] [duration(30m/2h/7d)]");
+            return;
+        }
+        String targetName = args[0].trim();
+        UserConnection target = playerQueryService.getUserConnection(targetName);
+        if (target == null) {
+            sender.sendMessage("§cPlayer not online: " + targetName);
+            return;
+        }
+
+        String joined = args.length > 1 ? String.join(" ", Arrays.copyOfRange(args, 1, args.length)).trim() : "";
+        String reason = "Banned by an operator";
+        LocalDateTime expire = null;
+        if (!joined.isEmpty()) {
+            String[] tokens = joined.split(" ");
+            LocalDateTime parsed = parseDuration(tokens[tokens.length - 1]);
+            if (parsed != null) {
+                expire = parsed;
+                String rest = String.join(" ", Arrays.copyOfRange(tokens, 0, tokens.length - 1)).trim();
+                if (!rest.isEmpty()) {
+                    reason = rest;
+                }
+            } else {
+                reason = joined;
+            }
+        }
+
+        ProxyBanService.BanTarget banTarget = proxyBanService.resolveTarget(target.getUuid());
+        if (banTarget == null) {
+            sender.sendMessage("§c无法解析该玩家的封禁目标。");
+            return;
+        }
+        BanUserList ban = proxyBanService.ban(banTarget, reason, expire, sender.getName(), ProxyBanService.TYPE_GAME_BAN);
+        target.getChannel().writeAndFlush(new Kick("数据未更新")).addListener(future -> target.close());
+        sender.sendMessage("§a已封禁 " + target.getUsername() + " (BanID: " + ban.getBanID() + ")");
+    }
+
+    private LocalDateTime parseDuration(String token) {
+        if (token == null) {
+            return null;
+        }
+        Matcher m = DURATION_PATTERN.matcher(token.trim());
+        if (!m.matches()) {
+            return null;
+        }
+        long n = Long.parseLong(m.group(1));
+        char unit = Character.toLowerCase(m.group(2).charAt(0));
+        Duration d = switch (unit) {
+            case 's' -> Duration.ofSeconds(n);
+            case 'm' -> Duration.ofMinutes(n);
+            case 'h' -> Duration.ofHours(n);
+            case 'd' -> Duration.ofDays(n);
+            case 'w' -> Duration.ofDays(n * 7);
+            default -> null;
+        };
+        return d == null ? null : LocalDateTime.now().plus(d);
     }
 
     /** {@code /list}: 每个在线玩家及其当前服务器。 */

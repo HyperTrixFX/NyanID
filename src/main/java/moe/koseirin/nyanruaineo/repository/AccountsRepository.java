@@ -35,6 +35,12 @@ public interface AccountsRepository extends JpaRepository<Accounts, String>, Ser
     @Query(value = "SELECT uid FROM Accounts WHERE email = ?1 and isActive = true ")
     String findByEmail(String email);
 
+    @Query(value = "SELECT bind FROM Accounts WHERE uid = ?1 and isActive = true ")
+    String GetBindByUid(String uid);
+
+    @Query(value = "SELECT uid FROM Accounts WHERE bind = ?1 and isActive = true ")
+    String GetUidByBind(String Bind);
+
     @Query(value = "SELECT password FROM Accounts WHERE email = ?1 and isActive = true ")
     String LoginByEmail(String email);
 

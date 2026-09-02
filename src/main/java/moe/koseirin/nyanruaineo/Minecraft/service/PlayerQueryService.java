@@ -7,6 +7,7 @@ package moe.koseirin.nyanruaineo.Minecraft.service;
 
 import lombok.RequiredArgsConstructor;
 import moe.koseirin.nyanruaineo.Minecraft.MinecraftProxy;
+import moe.koseirin.nyanruaineo.Minecraft.config.cfg.BackendServer;
 import moe.koseirin.nyanruaineo.Minecraft.connection.ServerConnection;
 import moe.koseirin.nyanruaineo.Minecraft.connection.UserConnection;
 import org.springframework.stereotype.Component;
@@ -42,7 +43,7 @@ public class PlayerQueryService {
                     user.getUuid(),
                     user.getProtocolVersion(),
                     server == null ? null : resolveServerName(server),
-                    server == null ? null : server.getHost(),
+                    server == null ? null : "Unknown Continent",
                     server == null ? -1 : server.getPort()));
         }
         return players;
@@ -55,6 +56,18 @@ public class PlayerQueryService {
         }
         for (PlayerInfo player : getOnlinePlayers()) {
             if (player.username() != null && player.username().equalsIgnoreCase(name)) {
+                return player;
+            }
+        }
+        return null;
+    }
+
+    public PlayerInfo findPlayerByUUID(String uuid) {
+        if (uuid == null || uuid.isBlank()) {
+            return null;
+        }
+        for (PlayerInfo player : getOnlinePlayers()) {
+            if (player.uuid() != null && player.uuid().equals(UUID.fromString(uuid))) {
                 return player;
             }
         }
@@ -109,6 +122,19 @@ public class PlayerQueryService {
         return null;
     }
 
+    public UserConnection getUserConnectionByUUID(String uuid) {
+        if (uuid == null || uuid.isBlank()) {
+            return null;
+        }
+        for (UserConnection user : proxy.getOnlineUsers()) {
+            if (user.getUsername() != null && user.getUuid().equals(UUID.fromString(uuid))
+                    && user.getChannel() != null && user.getChannel().isActive()) {
+                return user;
+            }
+        }
+        return null;
+    }
+
     public boolean isOnline(String name) {
         return getUserConnection(name) != null;
     }
@@ -138,6 +164,6 @@ public class PlayerQueryService {
                 return backend.getName();
             }
         }
-        return server.getHost() + ":" + server.getPort();
+        return "Unknown Continent";
     }
 }

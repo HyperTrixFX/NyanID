@@ -18,7 +18,7 @@ import java.time.LocalDateTime;
 public class Accounts{
 
     @Id
-    @Column(columnDefinition="varchar(150)",nullable = false)
+    @Column(columnDefinition="varchar(32)",nullable = false)
     private String uid;
 
     @Column

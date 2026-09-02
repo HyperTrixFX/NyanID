@@ -134,8 +134,11 @@ public enum Protocol {
         GAME.toServer.register(771, 774, 0x06, UnsignedClientCommand.class, UnsignedClientCommand::new);
         GAME.toServer.register(775, Integer.MAX_VALUE, 0x07, UnsignedClientCommand.class, UnsignedClientCommand::new);
 
-        // 1.20.5+ tab-completion request (BungeeCord TabCompleteRequest) — intercepted so the proxy
+        // 1.19.3+ tab-completion request (BungeeCord TabCompleteRequest) — intercepted so the proxy
         // answers completion for its own commands instead of forwarding to the backend.
+        GAME.toServer.register(761, 761, 0x08, TabCompleteRequest.class, TabCompleteRequest::new);   // 1.19.3
+        GAME.toServer.register(762, 763, 0x09, TabCompleteRequest.class, TabCompleteRequest::new);   // 1.19.4-1.20.1
+        GAME.toServer.register(764, 765, 0x0A, TabCompleteRequest.class, TabCompleteRequest::new);   // 1.20.2-1.20.4
         GAME.toServer.register(766, 767, 0x0B, TabCompleteRequest.class, TabCompleteRequest::new);
         GAME.toServer.register(768, 770, 0x0D, TabCompleteRequest.class, TabCompleteRequest::new);
         GAME.toServer.register(771, 774, 0x0E, TabCompleteRequest.class, TabCompleteRequest::new);
