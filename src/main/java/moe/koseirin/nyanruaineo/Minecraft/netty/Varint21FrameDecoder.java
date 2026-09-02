@@ -6,6 +6,7 @@ package moe.koseirin.nyanruaineo.Minecraft.netty;
  */
 
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.CorruptedFrameException;
 
@@ -20,38 +21,44 @@ public class Varint21FrameDecoder extends ByteToMessageDecoder {
     private static final int MAX_VARINT_BYTES = 3;
 
     @Override
-    protected void decode(io.netty.channel.ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
+        if (!ctx.channel().isActive()) {
+            in.skipBytes(in.readableBytes());
+            return;
+        }
+
         in.markReaderIndex();
 
-        int result = 0;
-        int read = 0;
-        boolean complete = false;
+        int length = 0;
         for (int i = 0; i < MAX_VARINT_BYTES; i++) {
             if (!in.isReadable()) {
                 in.resetReaderIndex();
                 return;
             }
+
             byte b = in.readByte();
-            read++;
-            result |= (b & 0x7F) << (7 * i);
-            if ((b & 0x80) == 0) {
-                complete = true;
-                break;
+            length |= (b & 0x7F) << (7 * i);
+
+            if (b >= 0) {
+                if (length == 0) {
+                    throw new CorruptedFrameException("Empty Packet!");
+                }
+
+                if (in.readableBytes() < length) {
+                    in.resetReaderIndex();
+                    return;
+                }
+
+                if (in.hasMemoryAddress()) {
+                    out.add(in.readRetainedSlice(length));
+                } else {
+                    ByteBuf dst = ctx.alloc().directBuffer(length);
+                    in.readBytes(dst);
+                    out.add(dst);
+                }
+                return;
             }
         }
-
-        if (!complete) {
-            throw new CorruptedFrameException("VarInt21 frame length is too big");
-        }
-        if (result < 0) {
-            throw new CorruptedFrameException("negative pre-length");
-        }
-
-        if (in.readableBytes() < result) {
-            in.resetReaderIndex();
-            return;
-        }
-
-        out.add(in.readRetainedSlice(result));
+        throw new CorruptedFrameException("length wider than 21-bit");
     }
 }

@@ -12,10 +12,10 @@ import java.util.Map;
 import java.util.function.Supplier;
 
 /**
- * Packet registry for a single {@link Protocol} state and {@link Direction}, mirroring BungeeCord's
- * {@code ProtocolData}. Packets may be registered for all protocol versions or for a version range.
- * Lookups build a per-version hash map once (a connection's version never changes after the
- * handshake), so the hot decode/encode paths are O(1) instead of scanning every registration.
+ * 单个 {@link Protocol} 阶段和 {@link Direction} 的数据包注册表。
+ * 数据包可注册为适用于所有协议版本或某个版本范围。
+ * 查找操作会一次性构建每个版本的哈希映射（连接在握手后其协议版本不再改变），
+ * 因此热路径上的解码/编码为 O(1) 而非遍历所有注册项。
  */
 public final class ProtocolData {
 

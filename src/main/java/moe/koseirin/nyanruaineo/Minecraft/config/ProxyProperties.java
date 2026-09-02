@@ -8,11 +8,12 @@ package moe.koseirin.nyanruaineo.Minecraft.config;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
 import lombok.extern.slf4j.Slf4j;
+import moe.koseirin.nyanruaineo.Minecraft.config.cfg.FirewallConfig;
 import moe.koseirin.nyanruaineo.Minecraft.config.cfg.KickMessageConfig;
 import moe.koseirin.nyanruaineo.Minecraft.config.cfg.MotdConfig;
 import moe.koseirin.nyanruaineo.Minecraft.config.cfg.TabListConfig;
-import moe.koseirin.nyanruaineo.Minecraft.service.BackendServer;
-import moe.koseirin.nyanruaineo.Minecraft.service.ServerListConfig;
+import moe.koseirin.nyanruaineo.Minecraft.config.cfg.BackendServer;
+import moe.koseirin.nyanruaineo.Minecraft.config.cfg.ServerListConfig;
 import moe.koseirin.nyanruaineo.utils.System.SystemConfigCacheService;
 import org.springframework.stereotype.Component;
 
@@ -28,6 +29,7 @@ public class ProxyProperties {
     private static final String KEY_BACKEND_SERVERS = "proxy.backend.servers";
     private static final String KEY_MOTD = "proxy.motd";
     private static final String KEY_TABLIST = "proxy.tablist";
+    private static final String KEY_FIREWALL = "proxy.firewall";
     private static final String KEY_KICK_MESSAGE = "proxy.kick-message";
     private static final String KEY_MAX_PLAYERS = "proxy.maxPlayers";
     private static final String KEY_ONLINE_MODE = "proxy.online-mode";
@@ -103,7 +105,7 @@ public class ProxyProperties {
                     migrated.setDefaultServer(null);
                 } else {
                     migratedList.sort(Comparator.comparingInt(BackendServer::getPriority));
-                    migrated.setDefaultServer(migratedList.get(0).getName());
+                    migrated.setDefaultServer(migratedList.getFirst().getName());
                 }
                 try {
                     cacheService.updateConfig(KEY_BACKEND_SERVERS, JSON.toJSONString(migrated));
@@ -254,6 +256,58 @@ public class ProxyProperties {
         } catch (Exception e) {
             log.error("Failed to parse {} (value: {}): {}", KEY_TABLIST, val, e.getMessage());
             return new TabListConfig();
+        }
+    }
+
+    /**
+     * 从 {@code proxy.firewall} 读取连接防火墙配置：
+     *
+     * <pre>
+     * {
+     * "enabled": true,
+     * "maxConnectionsPerSecond": 3,
+     * "maxConcurrentPerIp": 5,
+     * "maxLoginAttemptsPerMinute": 10,
+     * "maxLoginFailuresPerMinute": 5,
+     * "banDurationSeconds": 300
+     * }
+     * </pre>
+     *
+     * 缺失时写回默认值；运行时修改配置后刷新缓存即可热重载。
+     */
+    public FirewallConfig getFirewallConfig() {
+        String val = cacheService.getConfig(KEY_FIREWALL);
+
+        if (val == null || val.isBlank()) {
+            FirewallConfig defaultConfig = new FirewallConfig();
+            defaultConfig.setEnabled(true);
+            defaultConfig.setMaxConnectionsPerSecond(5);
+            defaultConfig.setMaxConcurrentPerIp(12);
+            defaultConfig.setMaxLoginAttemptsPerMinute(20);
+            defaultConfig.setMaxLoginFailuresPerMinute(6);
+            defaultConfig.setBanDurationSeconds(600);
+            try {
+                cacheService.updateConfig(KEY_FIREWALL, JSON.toJSONString(defaultConfig));
+            } catch (Exception e) {
+                try {
+                    cacheService.addConfig(KEY_FIREWALL, JSON.toJSONString(defaultConfig));
+                } catch (Exception ignored) {
+                    // ignored
+                }
+            }
+            return defaultConfig;
+        }
+
+        try {
+            FirewallConfig config = JSON.parseObject(val.trim(), FirewallConfig.class);
+            if (config == null) {
+                log.error("Parsed {} to null; firewall disabled (value: {})", KEY_FIREWALL, val);
+                return new FirewallConfig();
+            }
+            return config;
+        } catch (Exception e) {
+            log.error("Failed to parse {} (value: {}): {}", KEY_FIREWALL, val, e.getMessage());
+            return new FirewallConfig();
         }
     }
 

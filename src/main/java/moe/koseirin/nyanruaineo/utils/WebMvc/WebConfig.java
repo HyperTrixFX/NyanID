@@ -5,6 +5,7 @@ package moe.koseirin.nyanruaineo.utils.WebMvc;
  * awa
  */
 
+import jakarta.annotation.PostConstruct;
 import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
@@ -49,7 +50,8 @@ public class WebConfig implements WebMvcConfigurer {
                 .addPathPatterns("/api/v3/zako/administration/validate")
                 .addPathPatterns("/api/zako/v1/user/2fa/open2fa")
                 .addPathPatterns("/api/zako/v1/user/2fa/close2fa")
-                .addPathPatterns("/api/yggdrasil/textures/**");
+                .addPathPatterns("/api/yggdrasil/textures/**")
+                .addPathPatterns("/api/zako/v3/**");
     }
 
 //    @Override
@@ -59,6 +61,11 @@ public class WebConfig implements WebMvcConfigurer {
 //         configurer.usePathPattern("/api/{version}");
 //         configurer.useMediaType("application/vnd.api.v1+json");
 //    }
+
+    @PostConstruct
+    private void a(){
+
+    }
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {

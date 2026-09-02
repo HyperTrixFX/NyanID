@@ -8,8 +8,8 @@ package moe.koseirin.nyanruaineo.Minecraft.protocol;
 import io.netty.util.AttributeKey;
 
 /**
- * Shared protocol constants used across the proxy, mirroring BungeeCord's
- * {@code ProtocolConstants} plus the feature thresholds this proxy needs.
+ * 代理端共享的协议常量，
+ * 并额外包含本代理端所需的功能阈值。
  */
 public final class ProtocolConstants {
 
@@ -65,6 +65,9 @@ public final class ProtocolConstants {
 
     /** 1.19.3 (761): the LoginRequest public key was removed again. */
     public static final int MINECRAFT_1_19_3 = 761;
+
+    /** 1.19.4 (762): the command-tree argument registry/parser format stabilised (1.19.4-1.20.1). */
+    public static final int MINECRAFT_1_19_4 = 762;
 
     /** 1.20.2 (764): the LoginRequest UUID became mandatory. */
     public static final int MINECRAFT_1_20_2 = 764;

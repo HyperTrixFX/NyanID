@@ -11,10 +11,10 @@ import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 /**
- * Base class for every Minecraft protocol packet, mirroring BungeeCord's {@code DefinedPacket}.
+ * 每个 Minecraft 协议数据包的基类。
  * <p>
- * Subclasses only need to implement the {@link #read(ByteBuf, int)} / {@link #write(ByteBuf, int)}
- * variants; the version-less variants delegate to them so callers may use either.
+ * 子类只需实现带版本参数的 {@link #read(ByteBuf, int)} 和 {@link #write(ByteBuf, int)} 方法；
+ * 不带版本参数的方法会委托给它们，以便调用方可以任意选用。
  */
 public abstract class DefinedPacket {
 
@@ -45,8 +45,7 @@ public abstract class DefinedPacket {
     }
 
     /**
-     * Reads a VarInt consuming at most {@code maxBytes} bytes, mirroring BungeeCord's bounded
-     * variant (used by the FML mod list, whose count field must stay tiny).
+     * 读取一个 VarInt，最多消耗 {@code maxBytes} 个字节（该变体用于 FML 模组列表，因为其计数字段必须保持很小）。
      */
     public static int readVarInt(ByteBuf input, int maxBytes) {
         int out = 0;
@@ -72,16 +71,13 @@ public abstract class DefinedPacket {
     }
 
     public static String readString(ByteBuf input) {
-        int length = readVarInt(input);
-        byte[] bytes = new byte[length];
-        input.readBytes(bytes);
+        byte[] bytes = readArray(input);
         return new String(bytes, StandardCharsets.UTF_8);
     }
 
     /**
-     * Reads a string whose UTF-8 byte length and decoded character count are both bounded,
-     * mirroring BungeeCord's {@code readString(ByteBuf, int)} (used for legacy plugin channel
-     * names).
+     * 读取一个字符串，其 UTF-8 字节长度和解码后的字符数量均受限制
+     * （该方法用于旧版插件频道名称）。
      */
     public static String readString(ByteBuf input, int maxLen) {
         int length = readVarInt(input);
@@ -126,17 +122,15 @@ public abstract class DefinedPacket {
     }
 
     /**
-     * Decode this packet from the buffer, with the direction the packet travelled. The default
-     * implementation ignores the direction; packets whose wire format depends on it (e.g. the
-     * {@code PluginMessage} payload cap) override this.
+     * 从缓冲区解码此数据包，并携带该数据包的传输方向。默认实现忽略方向；
+     * 那些数据包格式依赖于方向的数据包会重写此方法。
      */
     public void read(ByteBuf buf, Direction direction, int protocolVersion) {
         read(buf, protocolVersion);
     }
 
     /**
-     * Decode this packet from the buffer. The protocol version is provided so version-dependent
-     * packets can switch their wire format.
+     * 从缓冲区解码此数据包。提供协议版本，以便版本相关的数据包可以切换其网络格式。
      */
     public void read(ByteBuf buf, int protocolVersion) {
         throw new UnsupportedOperationException("Packet must implement read");
@@ -147,7 +141,7 @@ public abstract class DefinedPacket {
     }
 
     /**
-     * Encode this packet to the buffer.
+     * 将此数据包编码到缓冲区。
      */
     public void write(ByteBuf buf, int protocolVersion) {
         throw new UnsupportedOperationException("Packet must implement write");
@@ -158,10 +152,9 @@ public abstract class DefinedPacket {
     }
 
     /**
-     * The protocol phase this packet moves the connection to once it is decoded/encoded, or
-     * {@code null} to leave the current phase unchanged. Mirrors BungeeCord's
-     * {@code nextProtocol()} (LoginAcknowledged/StartConfiguration → CONFIGURATION,
-     * FinishConfiguration → GAME). The decoder/encoder apply this automatically.
+     * 该数据包在解码/编码完成后会将连接转移到的协议阶段；若为 {@code null} 则表示保持当前阶段不变。
+     * （例如 LoginAcknowledged / StartConfiguration → CONFIGURATION，
+     * FinishConfiguration → GAME）。解码器/编码器会自动应用此阶段切换。
      */
     public Protocol nextProtocol() {
         return null;

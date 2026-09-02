@@ -35,8 +35,7 @@ public class PacketDecompressor extends ByteToMessageDecoder {
             return;
         }
 
-        byte[] input = new byte[in.readableBytes()];
-        in.readBytes(input);
+        byte[] input = DefinedPacket.toArray(in);
 
         byte[] output = new byte[uncompressedSize];
         inflater.setInput(input);

@@ -21,11 +21,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
 /**
- * Per-player server-side state tracked by the proxy (mirroring the fields BungeeCord keeps on its
- * {@code UserConnection}): the client/server entity ids, the current dimension and the server-sent
- * scoreboard objectives, scores, teams and boss bars. On a server switch
- * {@link #clearServerState} emits the removal packets so the client never carries the old
- * server's state into the new world — the BungeeCord cut-through cleanup.
+ * 代理端为每个玩家跟踪的服务端状态：
+ * 客户端/服务端实体 ID、当前维度以及服务端发送的计分板目标、分数、队伍和 Boss 条。
+ * 在切换服务器时，{@link #clearServerState} 会发出移除数据包，
+ * 使客户端不会将旧服务器的状态带入新世界。
  */
 @Slf4j
 @Service
@@ -126,9 +125,8 @@ public class PlayerStateService {
     }
 
     /**
-     * Emits the removal packets for everything the old server sent (scoreboard objectives/scores,
-     * teams, boss bars) through the given sink — normally {@code user::sendPacket} — and clears
-     * the tracked state. Mirrors BungeeCord's {@code ServerConnector.handleLogin} cleanup.
+     * 通过给定的接收器（通常是 {@code user::sendPacket}）发出针对旧服务器发送的所有内容
+     * （计分板目标/分数、队伍、Boss 条）的移除数据包，并清除跟踪的状态。
      */
     public void clearServerState(UserConnection user, Consumer<DefinedPacket> sink) {
         State state = state(user);

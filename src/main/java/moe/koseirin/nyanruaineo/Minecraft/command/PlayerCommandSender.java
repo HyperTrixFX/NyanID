@@ -9,6 +9,8 @@ import lombok.Getter;
 import moe.koseirin.nyanruaineo.Minecraft.MinecraftProxy;
 import moe.koseirin.nyanruaineo.Minecraft.connection.UserConnection;
 
+import java.util.UUID;
+
 /**
  * 在线代理玩家的 {@link CommandSender} 视图。回复通过共享的 {@code PlayerMessageService} 发送，
  * 因此它们会遵循代理的聊天格式。
@@ -34,11 +36,20 @@ public class PlayerCommandSender implements CommandSender {
         proxy.getPlayerMessageService().sendMessage(user, message);
     }
 
+    /**
+     * 权限检查委托给 Spring 的 {@code PermissionService}：先由玩家的 Minecraft UUID 解析出
+     * NyanID 账号 UID，再按权限节点（含 {@code *} 与 {@code x.*} 通配）判断。
+     */
     @Override
     public boolean hasPermission(String permission) {
-        //TODO 指令权限检查未实现
-        // No permission system yet — every player may run every registered command.
-        return true;
+        if (permission == null || permission.isEmpty()) {
+            return true;
+        }
+        UUID uuid = user.getUuid();
+        if (uuid == null) {
+            return false;
+        }
+        return proxy.getPermissionService().hasPermission(uuid, permission);
     }
 
 }

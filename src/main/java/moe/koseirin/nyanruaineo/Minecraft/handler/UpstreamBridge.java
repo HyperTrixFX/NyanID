@@ -201,16 +201,26 @@ public class UpstreamBridge extends ChannelInboundHandlerAdapter {
     }
 
     /**
-     * Builds a raw clientbound command-suggestion response (0x10 for 1.20.2-1.21.4, 0x0F for
-     * 1.21.5+) for the front-end GAME codec, which relays it verbatim to the client. The ids mirror
-     * BungeeCord's {@code TabCompleteResponse} mapping ({@code command_suggestions}); they must NOT
-     * be confused with the play-phase {@code cookie_request} packet (0x16/0x15), which previously
-     * occupied this slot and made 1.21+ clients fail decoding the response as a cookie_request.
+     * Builds a raw clientbound command-suggestion response for the front-end GAME codec, which
+     * relays it verbatim to the client. The packet id mirrors BungeeCord's {@code TabCompleteResponse}
+     * mapping ({@code command_suggestions}): 0x0D (1.19.3), 0x0F (1.19.4-1.20.1 / 1.21.5+),
+     * 0x10 (1.20.2-1.21.4). It must NOT be confused with the play-phase {@code cookie_request}
+     * packet (0x16/0x15), which previously occupied this slot and made 1.21+ clients fail decoding.
      */
     private io.netty.buffer.ByteBuf buildTabCompleteResponse(int transactionId, int start, int length,
                                                              java.util.List<String> suggestions) {
         io.netty.buffer.ByteBuf buf = io.netty.buffer.Unpooled.buffer();
-        int responseId = user.getProtocolVersion() >= ProtocolConstants.MINECRAFT_1_21_5 ? 0x0F : 0x10;
+        int version = user.getProtocolVersion();
+        int responseId;
+        if (version >= ProtocolConstants.MINECRAFT_1_21_5) {
+            responseId = 0x0F; // 1.21.5+
+        } else if (version >= ProtocolConstants.MINECRAFT_1_20_2) {
+            responseId = 0x10; // 1.20.2-1.21.4
+        } else if (version >= ProtocolConstants.MINECRAFT_1_19_4) {
+            responseId = 0x0F; // 1.19.4-1.20.1
+        } else {
+            responseId = 0x0D; // 1.19.3
+        }
         DefinedPacket.writeVarInt(responseId, buf); // ClientboundCommandSuggestionsPacket
         DefinedPacket.writeVarInt(transactionId, buf);
         DefinedPacket.writeVarInt(start, buf);

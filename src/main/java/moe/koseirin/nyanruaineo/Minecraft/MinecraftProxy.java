@@ -7,7 +7,6 @@ package moe.koseirin.nyanruaineo.Minecraft;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
-import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
@@ -15,20 +14,16 @@ import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import moe.koseirin.nyanruaineo.Minecraft.service.*;
 import moe.koseirin.nyanruaineo.eventbus.EventBus;
 import moe.koseirin.nyanruaineo.Minecraft.config.ProxyProperties;
 import moe.koseirin.nyanruaineo.Minecraft.connection.UserConnection;
 import moe.koseirin.nyanruaineo.Minecraft.handler.InitialHandler;
+import moe.koseirin.nyanruaineo.Minecraft.netty.FirewallHandler;
 import moe.koseirin.nyanruaineo.Minecraft.netty.HandlerBoss;
 import moe.koseirin.nyanruaineo.Minecraft.netty.PipelineUtils;
 import moe.koseirin.nyanruaineo.Minecraft.protocol.packet.TabListHeaderFooter;
-import moe.koseirin.nyanruaineo.Minecraft.service.BackendServerManager;
-import moe.koseirin.nyanruaineo.Minecraft.service.PingResponseProvider;
-import moe.koseirin.nyanruaineo.Minecraft.service.PlayerAuthService;
-import moe.koseirin.nyanruaineo.Minecraft.service.PlayerMessageService;
-import moe.koseirin.nyanruaineo.Minecraft.service.PlayerStateService;
-import moe.koseirin.nyanruaineo.Minecraft.service.PluginMessageService;
-import moe.koseirin.nyanruaineo.Minecraft.service.TabListService;
+import moe.koseirin.nyanruaineo.services.PermissionService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
@@ -63,6 +58,14 @@ public class MinecraftProxy {
     private final PluginMessageService pluginMessageService;
     @Getter
     private final moe.koseirin.nyanruaineo.Minecraft.command.CommandManager commandManager;
+    @Getter
+    private final FirewallService firewallService;
+    @Getter
+    private final PermissionService permissionService;
+    @Getter
+    private final ProxyBanService proxyBanService;
+
+    private final PlayerQueryService playerQueryService;
 
     @Value("${NyanidSetting.EnableProxy:false}")
     private boolean enableProxy;
@@ -90,7 +93,11 @@ public class MinecraftProxy {
                           // @Lazy breaks the construction cycle: PluginMessageService itself depends
                           // back on MinecraftProxy (for the online player set and event bus).
                           @Lazy PluginMessageService pluginMessageService,
-                          moe.koseirin.nyanruaineo.Minecraft.command.CommandManager commandManager) {
+                          moe.koseirin.nyanruaineo.Minecraft.command.CommandManager commandManager,
+                          FirewallService firewallService,
+                          PermissionService permissionService,
+                          ProxyBanService proxyBanService,
+                          @Lazy PlayerQueryService playerQueryService) {
         this.properties = properties;
         this.playerAuthService = playerAuthService;
         this.pingResponseProvider = pingResponseProvider;
@@ -101,6 +108,10 @@ public class MinecraftProxy {
         this.playerStateService = playerStateService;
         this.pluginMessageService = pluginMessageService;
         this.commandManager = commandManager;
+        this.firewallService = firewallService;
+        this.permissionService = permissionService;
+        this.proxyBanService = proxyBanService;
+        this.playerQueryService = playerQueryService;
     }
 
     @PostConstruct
@@ -122,6 +133,8 @@ public class MinecraftProxy {
                 .childHandler(new ChannelInitializer<SocketChannel>() {
                     @Override
                     protected void initChannel(SocketChannel ch) {
+                        // Firewall first: reject banned / flood connections before any protocol work.
+                        ch.pipeline().addFirst("firewall", new FirewallHandler(firewallService));
                         HandlerBoss boss = PipelineUtils.initFrontendPipeline(ch.pipeline());
                         boss.setHandler(new InitialHandler(MinecraftProxy.this, ch));
                     }
@@ -193,5 +206,10 @@ public class MinecraftProxy {
                 log.warn("Failed to refresh the TabList for {}", player.getUsername(), e);
             }
         }
+    }
+
+
+    public PlayerQueryService.PlayerInfo findPlayerByUUID(String uuid) {
+        return playerQueryService.findPlayerByUUID(uuid);
     }
 }

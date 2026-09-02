@@ -6,19 +6,17 @@ package moe.koseirin.nyanruaineo.Minecraft.protocol;
  */
 
 /**
- * Packet direction, mirroring BungeeCord's {@code ProtocolConstants.Direction}.
+ * 数据包方向。
  */
 public enum Direction {
 
     /**
-     * Packets flowing from a client towards a server (clientbound-in-bound, i.e. inbound on the
-     * front-end channel and outbound on the back-end channel).
+     * 从客户端流向服务器的数据包（即在前端通道为入站，在后端通道为出站）。
      */
     TO_SERVER,
 
     /**
-     * Packets flowing from a server towards a client (outbound on the front-end channel and
-     * inbound on the back-end channel).
+     * 从服务器流向客户端的数据包（即在前端通道为出站，在后端通道为入站）。
      */
     TO_CLIENT
 }

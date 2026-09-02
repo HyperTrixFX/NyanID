@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import com.alibaba.fastjson2.JSONObject;
 import moe.koseirin.nyanruaineo.Minecraft.config.ProxyProperties;
+import moe.koseirin.nyanruaineo.Minecraft.config.cfg.BackendServer;
 import moe.koseirin.nyanruaineo.Minecraft.config.cfg.TabListConfig;
 import moe.koseirin.nyanruaineo.Minecraft.connection.ServerConnection;
 import moe.koseirin.nyanruaineo.Minecraft.connection.UserConnection;
@@ -343,10 +344,10 @@ public class TabListService {
         for (BackendServer backend : servers()) {
             if (backend.getHost() != null && backend.getHost().equalsIgnoreCase(server.getHost())
                     && backend.getPort() == server.getPort()) {
-                return backend.getName();
+                return backend.getUid();
             }
         }
-        return server.getHost() + ":" + server.getPort();
+        return "Unknown Continent";
     }
 
     /** The server name a UUID's player is currently on, or {@code null} when not a proxied player. */

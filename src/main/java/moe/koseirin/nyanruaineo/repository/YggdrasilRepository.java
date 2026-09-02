@@ -20,6 +20,9 @@ public interface YggdrasilRepository extends JpaRepository<Yggdrasil, String>, S
     @Query(value = "SELECT y.uuid  FROM Yggdrasil y WHERE y.nyanuid = ?1 OR y.uuid = ?1")
     String GetPlayerUUID(String uid);
 
+    @Query(value = "SELECT y.nyanuid FROM Yggdrasil y WHERE y.uuid = ?1")
+    String findNyanUidByUuid(String mcUuid);
+
     @Query(value = "SELECT y.playername  FROM Yggdrasil y WHERE y.nyanuid = ?1 OR y.uuid = ?1")
     String GetPlayerNAME(String uid);
 

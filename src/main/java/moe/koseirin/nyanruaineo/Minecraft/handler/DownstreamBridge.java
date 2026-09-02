@@ -252,15 +252,21 @@ public class DownstreamBridge extends ChannelInboundHandlerAdapter {
         // (literal + a greedy-string "args" child with the ask-server suggestion), so the client's
         // dispatcher is non-empty, /server & co. are sent to the proxy, and joining works
         // universally for any NeoForge/Forge/vanilla client regardless of its registry state.
-        // Packet id: 0x11 (1.20.5-1.21.4), 0x10 (1.21.5+).
-        if (msg instanceof ByteBuf raw && raw.isReadable() && user.getProtocolVersion() >= 766) {
+        // Packet id: 0x0E (1.19.3), 0x10 (1.19.4-1.20.1), 0x11 (1.20.2-1.21.4), 0x10 (1.21.5+).
+        if (msg instanceof ByteBuf raw && raw.isReadable()
+                && user.getProtocolVersion() >= ProtocolConstants.MINECRAFT_1_19_3) {
             try {
                 int packetId = DefinedPacket.readVarInt(raw.duplicate());
                 if (packetId == declareCommandsId()) {
-                    log.debug("{}: replacing backend command tree with proxy command tree",
-                            user.getUsername());
+                    // Extract the backend's top-level command names so the client can still
+                    // tab-complete them (merged into the synthetic tree as ask-server literals).
+                    // Falls back to the proxy-only tree when the backend tree can't be walked
+                    // (modded argument parsers).
+                    java.util.List<String> backendCommands = extractBackendCommandNames(raw);
+                    log.debug("{}: replacing backend command tree with proxy command tree ({} backend commands)",
+                            user.getUsername(), backendCommands == null ? "unparseable" : backendCommands.size());
                     raw.release();
-                    msg = buildProxyCommandTree();
+                    msg = buildProxyCommandTree(backendCommands);
                 }
             } catch (Exception ignored) {
                 // Never break forwarding because of a replacement attempt.
@@ -272,25 +278,41 @@ public class DownstreamBridge extends ChannelInboundHandlerAdapter {
 
     /** The clientbound declare_commands packet id for the player's protocol version. */
     private int declareCommandsId() {
-        return user.getProtocolVersion() >= ProtocolConstants.MINECRAFT_1_21_5 ? 0x10 : 0x11;
+        int version = user.getProtocolVersion();
+        if (version >= ProtocolConstants.MINECRAFT_1_21_5) {
+            return 0x10; // 1.21.5+
+        }
+        if (version >= ProtocolConstants.MINECRAFT_1_20_2) {
+            return 0x11; // 1.20.2-1.21.4
+        }
+        if (version >= ProtocolConstants.MINECRAFT_1_19_4) {
+            return 0x10; // 1.19.4-1.20.1
+        }
+        return 0x0E;     // 1.19.3
     }
 
     /**
-     * Builds a 1.20.5+ declare_commands payload containing only the proxy's own commands, mirroring
-     * BungeeCord's {@code DownstreamBridge#handle(Commands)}: a root node whose children are the
-     * proxy command literals, each followed by a greedy-string {@code args} argument node carrying
-     * the {@code minecraft:ask_server} suggestion. Format per node:
-     * [flags][children count + ids][redirect?][name][parser id + property][suggestions id].
+     * Builds a 1.20.5+ declare_commands payload whose root carries the proxy's own commands plus,
+     * when available, the backend's top-level command names (each as a literal with a greedy-string
+     * {@code args} child using the {@code minecraft:ask_server} suggestion, mirroring BungeeCord's
+     * {@code DownstreamBridge#handle(Commands)}). The backend names keep the client's dispatcher
+     * aware of backend commands so they tab-complete and are not shown as "unknown command", while
+     * their arguments still round-trip to the backend via ask-server. {@code backendCommands} may be
+     * {@code null} (unparseable backend tree) or empty.
      */
-    private ByteBuf buildProxyCommandTree() {
-        // The proxy commands the client should see in its dispatcher, driven by the CommandManager
-        // so registering a new command (name or alias) automatically appears in tab completion.
+    private ByteBuf buildProxyCommandTree(java.util.List<String> backendCommands) {
+        // Ordered, de-duplicated command names: proxy commands first (they take precedence), then
+        // backend command names the proxy does not already own.
+        java.util.LinkedHashSet<String> commands = new java.util.LinkedHashSet<>();
         java.util.List<String> proxyCommands = proxy.getCommandManager().getCommandNames();
-        if (proxyCommands.isEmpty()) {
-            // Nothing registered: fall back to a bare root so the client's dispatcher is non-empty.
-            proxyCommands = java.util.List.of();
+        if (proxyCommands != null) {
+            commands.addAll(proxyCommands);
         }
-        int commandCount = proxyCommands.size();
+        if (backendCommands != null) {
+            commands.addAll(backendCommands);
+        }
+        java.util.List<String> commandList = new java.util.ArrayList<>(commands);
+        int commandCount = commandList.size();
         // root + (literal + args) per command
         int nodeCount = 1 + commandCount * 2;
 
@@ -310,11 +332,11 @@ public class DownstreamBridge extends ChannelInboundHandlerAdapter {
                 int literalIndex = 1 + c * 2;
                 int argsIndex = literalIndex + 1;
 
-                // literal node "server": flags LITERAL | HAS_COMMAND, one child (args), name.
+                // literal node: flags LITERAL | HAS_COMMAND, one child (args), name.
                 DefinedPacket.writeVarInt(0x05, tree);
                 DefinedPacket.writeVarInt(1, tree);
                 DefinedPacket.writeVarInt(argsIndex, tree);
-                DefinedPacket.writeString(proxyCommands.get(c), tree);
+                DefinedPacket.writeString(commandList.get(c), tree);
 
                 // args node: flags ARGUMENT | HAS_COMMAND | SUGGESTIONS, greedy string, ask-server.
                 DefinedPacket.writeVarInt(0x16, tree);
@@ -331,6 +353,88 @@ public class DownstreamBridge extends ChannelInboundHandlerAdapter {
         } catch (Exception e) {
             tree.release();
             throw e;
+        }
+    }
+
+    /**
+     * Best-effort extraction of the backend's top-level command names (literals directly under the
+     * root) from a raw declare_commands frame. Returns {@code null} when the tree cannot be walked
+     * reliably (modded argument parsers or a malformed frame), so the caller falls back to the
+     * proxy-only tree.
+     */
+    private java.util.List<String> extractBackendCommandNames(ByteBuf raw) {
+        ByteBuf buf = raw.duplicate();
+        try {
+            DefinedPacket.readVarInt(buf); // packet id
+            int nodeCount = DefinedPacket.readVarInt(buf);
+            if (nodeCount <= 0 || nodeCount > 8192) {
+                return null;
+            }
+
+            String[] names = new String[nodeCount];
+            int[][] children = new int[nodeCount][];
+            for (int i = 0; i < nodeCount; i++) {
+                if (!buf.isReadable()) {
+                    return null;
+                }
+                int flags = buf.readUnsignedByte();
+                int type = flags & 0x03;
+
+                int childCount = DefinedPacket.readVarInt(buf);
+                int[] childIds = new int[childCount];
+                for (int c = 0; c < childCount; c++) {
+                    if (!buf.isReadable()) {
+                        return null;
+                    }
+                    childIds[c] = DefinedPacket.readVarInt(buf);
+                }
+                children[i] = childIds;
+
+                if ((flags & 0x08) != 0) {
+                    if (!buf.isReadable()) {
+                        return null;
+                    }
+                    DefinedPacket.readVarInt(buf); // redirect
+                }
+
+                String name = null;
+                if (type == 1) {
+                    name = DefinedPacket.readString(buf);
+                } else if (type == 2) {
+                    name = DefinedPacket.readString(buf);
+                    int parser = DefinedPacket.readVarInt(buf);
+                    if (!skipParserProperties(buf, parser)) {
+                        return null; // modded parser → can't walk
+                    }
+                    if ((flags & 0x10) != 0) {
+                        DefinedPacket.readString(buf); // suggestions provider
+                    }
+                } else if (type != 0) {
+                    return null;
+                }
+                names[i] = name;
+            }
+
+            if (!buf.isReadable()) {
+                return null;
+            }
+            int rootIndex = DefinedPacket.readVarInt(buf);
+            if (buf.isReadable()) {
+                return null; // drift: consumed bytes don't line up
+            }
+            if (rootIndex < 0 || rootIndex >= nodeCount) {
+                return null;
+            }
+
+            java.util.List<String> result = new java.util.ArrayList<>();
+            for (int child : children[rootIndex]) {
+                if (child >= 0 && child < nodeCount && names[child] != null && !names[child].isEmpty()) {
+                    result.add(names[child]);
+                }
+            }
+            return result;
+        } catch (Exception e) {
+            return null;
         }
     }
 
@@ -765,48 +869,96 @@ public class DownstreamBridge extends ChannelInboundHandlerAdapter {
         }
     }
 
-    /** Returns false when the parser is modded/unknown and its property cannot be skipped. */
+    /**
+     * Skips one vanilla argument parser's properties using the exact parser-id → serializer mapping
+     * from BungeeCord's {@code Commands.ArgumentRegistry}. The parser-id numbering shifts between
+     * versions ({@code IDS_1_19_4} for 1.19.3-1.20.2, {@code IDS_1_20_3} for 1.20.3-1.20.4,
+     * {@code IDS_1_20_5} for 1.20.5+). Returns false when the parser is modded/unknown, so callers
+     * can abort walking.
+     */
     private boolean skipParserProperties(ByteBuf buf, int parser) {
-        if (parser == 0) {
-            return true;
-        }
-        if (parser == 1 || parser == 2 || parser == 3 || parser == 4) {
-            int flags = buf.readByte() & 0xFF;
-            if ((flags & 0x02) != 0) {
-                buf.skipBytes(4);
+        int version = user.getProtocolVersion();
+
+        // Range types: flags byte (0x01=min, 0x02=max) + optional bounds. The bound width depends
+        // on the numeric type (float=4, double=8, integer=4, long=8). Stable ids across 1.19.3+.
+        switch (parser) {
+            case 1:   // brigadier:float → float bounds
+            case 3: { // brigadier:integer → int bounds
+                int flags = buf.readUnsignedByte();
+                if ((flags & 0x01) != 0) {
+                    buf.skipBytes(4);
+                }
+                if ((flags & 0x02) != 0) {
+                    buf.skipBytes(4);
+                }
+                return true;
             }
-            if ((flags & 0x04) != 0) {
-                buf.skipBytes(4);
+            case 2:   // brigadier:double → double bounds
+            case 4: { // brigadier:long → long bounds
+                int flags = buf.readUnsignedByte();
+                if ((flags & 0x01) != 0) {
+                    buf.skipBytes(8);
+                }
+                if ((flags & 0x02) != 0) {
+                    buf.skipBytes(8);
+                }
+                return true;
             }
-            return true;
+            case 5: // brigadier:string → StringType (VarInt, 1 byte in practice)
+                DefinedPacket.readVarInt(buf);
+                return true;
+            case 6: // minecraft:entity → single/multiple (byte)
+                buf.skipBytes(1);
+                return true;
+            default:
+                break;
         }
-        if (parser == 5 || parser == 6 || parser == 7) {
+
+        // Parser ids that shift across versions.
+        final int scoreHolderId;
+        final int timeId;
+        final int resourceStart;
+        final int resourceEnd;
+        final int maxVanillaId;
+        if (version >= ProtocolConstants.MINECRAFT_1_20_5) {
+            // 1.20.5+ (IDS_1_20_5)
+            scoreHolderId = 30;
+            timeId = 42;
+            resourceStart = 43;
+            resourceEnd = 46;
+            maxVanillaId = 53;
+        } else if (version >= ProtocolConstants.MINECRAFT_1_20_3) {
+            // 1.20.3-1.20.4 (IDS_1_20_3)
+            scoreHolderId = 30;
+            timeId = 41;
+            resourceStart = 42;
+            resourceEnd = 45;
+            maxVanillaId = 49;
+        } else {
+            // 1.19.3-1.20.2 (IDS_1_19_4)
+            scoreHolderId = 29;
+            timeId = 40;
+            resourceStart = 41;
+            resourceEnd = 44;
+            maxVanillaId = 48;
+        }
+
+        if (parser == scoreHolderId) { // minecraft:score_holder → single/multiple (byte)
             buf.skipBytes(1);
             return true;
         }
-        if (parser == 13 || parser == 15 || parser == 30) {
-            buf.skipBytes(1);
+        if (parser == timeId) { // minecraft:time → time unit (int, 4 bytes)
+            buf.skipBytes(4);
             return true;
         }
-        if (parser == 26) {
-            DefinedPacket.readVarInt(buf); // particle id
-            // Particle NBT is complex; treat as unknown.
-            return false;
-        }
-        if (parser == 38 || parser == 39) {
-            int flags = buf.readByte() & 0xFF;
-            if ((flags & 0x01) != 0) {
-                buf.skipBytes(4);
-            }
-            if ((flags & 0x02) != 0) {
-                buf.skipBytes(4);
-            }
+        if (parser >= resourceStart && parser <= resourceEnd) {
+            // minecraft:resource_or_tag / resource_or_tag_key / resource / resource_key → string
+            DefinedPacket.readString(buf);
             return true;
         }
-        // Vanilla parsers with no property (block_pos, vec3, resource_location, ...) plus any
-        // modded parser: for ids within the vanilla range (<= 50) treat as no-property; beyond
-        // that the property format is mod-defined and unknowable here.
-        return parser <= 50;
+
+        // Every remaining vanilla parser carries no property (VOID).
+        return parser >= 0 && parser <= maxVanillaId;
     }
 
     /**

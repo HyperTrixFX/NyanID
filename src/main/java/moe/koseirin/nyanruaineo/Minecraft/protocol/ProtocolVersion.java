@@ -8,8 +8,7 @@ package moe.koseirin.nyanruaineo.Minecraft.protocol;
 import lombok.Getter;
 
 /**
- * Human-readable protocol version mapping, mirroring BungeeCord's {@code ProtocolConstants}. The raw
- * integer protocol number drives wire-format decisions; this enum only maps it to a display name.
+ * 整型的协议版本号决定了数据包的传输格式；此枚举仅将其映射为显示名称。
  */
 @Getter
 public enum ProtocolVersion {

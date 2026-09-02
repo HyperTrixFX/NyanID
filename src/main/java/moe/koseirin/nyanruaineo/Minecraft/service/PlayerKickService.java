@@ -21,11 +21,12 @@ import org.springframework.stereotype.Component;
 import java.security.SecureRandom;
 
 /**
- * Kicks players off the proxy with a customisable kick screen (BungeeCord {@code disconnect}
- * style). The message template lives in the {@code proxy.kick-message} database config
- * ({@code banned_message_base} with {@code &} colour codes, {@code \n}/{@code |} line breaks and
- * {@code $playerName} / {@code $reason} / {@code $idRandom} placeholders) and is sent through the
- * version-appropriate play-state Disconnect packet before the connection is closed.
+ * 以可自定义的踢出界面将玩家踢出代理端。
+ * 消息模板位于 {@code proxy.kick-message} 数据库配置中
+ * （包括带有 {@code &} 颜色代码、{@code \n}/{@code |} 换行符以及
+ * {@code $playerName} / {@code $reason} / {@code $idRandom} 占位符的
+ * {@code banned_message_base}），在关闭连接之前会通过版本适配的游戏阶段
+ * Disconnect 数据包发送。
  */
 @Slf4j
 @Component
@@ -39,11 +40,14 @@ public class PlayerKickService {
     private final ProxyProperties properties;
 
     /** Kicks one player with the configured kick screen and the given reason. */
-    public void kick(UserConnection user, String reason) {
+    public void kick(UserConnection user, String reason, String kid) {
         if (user.getChannel() == null || !user.getChannel().isActive()) {
             return;
         }
-        String message = buildMessage(user.getUsername(), reason == null ? "" : reason);
+        if (kid == null){
+            kid = randomId();
+        }
+        String message = buildMessage(user.getUsername(), reason == null ? "" : reason , kid);
         int protocolVersion = user.getProtocolVersion();
 
         ByteBuf buf = Unpooled.buffer();
@@ -61,10 +65,10 @@ public class PlayerKickService {
     }
 
     /** Kicks every online player with the configured kick screen. */
-    public void kickAll(String reason) {
+    public void kickAll(String reason,String kid) {
         for (UserConnection user : proxy.getOnlineUsers()) {
             try {
-                kick(user, reason);
+                kick(user, reason,kid);
             } catch (Exception e) {
                 log.warn("Failed to kick {}", user.getUsername(), e);
             }
@@ -76,7 +80,7 @@ public class PlayerKickService {
      * line breaks ({@code \n} or {@code |}), {@code &} → {@code §} colour codes and the
      * {@code $playerName}/{@code $reason}/{@code $idRandom} placeholders.
      */
-    private String buildMessage(String playerName, String reason) {
+    private String buildMessage(String playerName, String reason,String kid) {
         KickMessageConfig config = properties.getKickMessageConfig();
         String template = (config.isEnabled() && config.getBannedMessageBase() != null)
                 ? config.getBannedMessageBase()
@@ -95,10 +99,12 @@ public class PlayerKickService {
         }
 
         return message.toString()
+                .replace("\\n&b&l»&f&lExpireTime : &c&l$ExpireTime","")
+                .replace("UUID:","Player:")
                 .replace('&', '\u00A7')
-                .replace("$playerName", playerName)
+                .replace("$playerUID", playerName)
                 .replace("$reason", reason)
-                .replace("$idRandom", randomId());
+                .replace("$idRandom", kid);
     }
 
     private String randomId() {
@@ -110,8 +116,8 @@ public class PlayerKickService {
     }
 
     /**
-     * Clientbound play-state Disconnect packet ids per protocol version (BungeeCord {@code GAME
-     * TO_CLIENT Kick} mappings; versions without an entry inherit the nearest lower one).
+     * 按协议版本区分的客户端游戏阶段断开连接数据包 ID；
+     * 未明确列出条目的版本会继承相邻的较低版本）。
      */
     private static int kickPacketId(int protocolVersion) {
         if (protocolVersion >= 773) {

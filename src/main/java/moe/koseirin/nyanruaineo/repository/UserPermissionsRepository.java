@@ -7,19 +7,21 @@ package moe.koseirin.nyanruaineo.repository;
  */
 
 import moe.koseirin.nyanruaineo.entity.UserPermissions;
+import moe.koseirin.nyanruaineo.entity.UserPermissionsId;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.io.Serializable;
+import java.util.List;
 
 @Repository
-public interface UserPermissionsRepository extends JpaRepository<UserPermissions,String>, Serializable {
+public interface UserPermissionsRepository extends JpaRepository<UserPermissions, UserPermissionsId>, Serializable {
 
-    @Query(value = "SELECT u.UserGroup FROM UserPermissions u WHERE u.uid = ?1 AND u.Level = ?2 AND u.AccessKey = ?3")
-    String getUserGroup(String uid,String Action,String KEY);
+    List<UserPermissions> findByUid(String uid);
 
+    boolean existsByUidAndPermission(String uid, String permission);
 
-    @Query(value = "SELECT u FROM UserPermissions u WHERE u.uid = ?1")
-    UserPermissions getByUid(String uid);
+    void deleteByUidAndPermission(String uid, String permission);
+
+    long deleteByUid(String uid);
 }

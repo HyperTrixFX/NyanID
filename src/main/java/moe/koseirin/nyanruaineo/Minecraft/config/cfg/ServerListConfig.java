@@ -1,9 +1,10 @@
-package moe.koseirin.nyanruaineo.Minecraft.service;
+package moe.koseirin.nyanruaineo.Minecraft.config.cfg;
 
 /*
  * @author KoseiRin_
  * awa
  */
+
 
 import com.alibaba.fastjson2.annotation.JSONField;
 import lombok.Data;
