@@ -7,6 +7,7 @@ package moe.koseirin.nyanruaineo.Minecraft.service;
 
 import lombok.extern.slf4j.Slf4j;
 import moe.koseirin.nyanruaineo.Minecraft.config.ProxyProperties;
+import moe.koseirin.nyanruaineo.Minecraft.config.cfg.BackendServer;
 import org.springframework.stereotype.Component;
 
 import java.net.InetSocketAddress;

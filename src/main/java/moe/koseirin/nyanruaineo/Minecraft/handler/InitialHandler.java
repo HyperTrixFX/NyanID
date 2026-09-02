@@ -35,6 +35,7 @@ import moe.koseirin.nyanruaineo.Minecraft.protocol.packet.LoginSuccess;
 import moe.koseirin.nyanruaineo.Minecraft.protocol.packet.PingPacket;
 import moe.koseirin.nyanruaineo.Minecraft.protocol.packet.StatusRequest;
 import moe.koseirin.nyanruaineo.Minecraft.protocol.packet.StatusResponse;
+import moe.koseirin.nyanruaineo.entity.BanUserList;
 
 import javax.crypto.Cipher;
 import javax.crypto.spec.IvParameterSpec;
@@ -51,14 +52,15 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Handles the handshake, status and login phases for an incoming client connection, mirroring
- * BungeeCord's {@code InitialHandler}. Once login completes it hands the channel over to an
- * {@link UpstreamBridge} and delegates backend connection setup to a {@link ServerConnector}.
+ * 处理传入客户端连接的握手、状态和登录阶段。
+ * 登录完成后，它会将通道交给 {@link UpstreamBridge}，
+ * 并将后端连接的建立委托给 {@link ServerConnector}。
  */
 @Slf4j
 public class InitialHandler extends ChannelInboundHandlerAdapter {
 
     private final MinecraftProxy proxy;
+
     private final Channel channel;
 
     private Protocol protocol = Protocol.HANDSHAKE;
@@ -277,7 +279,18 @@ public class InitialHandler extends ChannelInboundHandlerAdapter {
     private void finishLogin(UUID authenticatedUuid, List<LoginSuccess.Property> authenticatedProperties) {
         this.uuid = authenticatedUuid;
         this.properties = authenticatedProperties;
-
+        if (!proxy.getProperties().isOnlineMode() && proxy.findPlayerByUUID(String.valueOf(authenticatedUuid))!= null ){
+            channel.writeAndFlush(new Kick("You are already connected to this proxy!"));
+            channel.close();
+        }
+        BanUserList ban = proxy.getProxyBanService().findGameBan(authenticatedUuid);
+        if (ban != null) {
+            log.info("{} ({}) blocked by game ban {} ({})", username, authenticatedUuid,
+                    ban.getBanID(), ban.getReason());
+            channel.writeAndFlush(new Kick(proxy.getProxyBanService().buildBanKickJson(ban)))
+                    .addListener(ChannelFutureListener.CLOSE);
+            return;
+        }
         this.user = new UserConnection(channel);
         user.setUsername(username);
         user.setUuid(authenticatedUuid);
@@ -301,11 +314,9 @@ public class InitialHandler extends ChannelInboundHandlerAdapter {
     }
 
     /**
-     * Called by the {@link ServerConnector} once the proxy sent Login Success to the client
-     * (pre-1.20.2 only). The client is already in the play state from its own perspective — Forge
-     * backends send the FML handshake right after Login Success, before the JoinGame — so the
-     * front-end codecs switch to GAME and the play-phase relay bridge is installed now, exactly
-     * like BungeeCord's {@code InitialHandler.handle(LoginSuccess)}.
+     * 由 {@link ServerConnector} 在代理端向客户端发送 Login Success 数据包后调用（仅限 pre-1.20.2 版本）。
+     * 从客户端自身视角来看，它已经处于游戏状态了——Forge 后端会在 Login Success 之后、JoinGame 之前
+     * 立即发送 FML 握手——因此前端编解码器切换至 GAME 阶段，并且现在安装游戏阶段的转发桥接器，
      */
     public void onLoginSuccess(ServerConnection server) {
         this.server = server;
@@ -317,10 +328,10 @@ public class InitialHandler extends ChannelInboundHandlerAdapter {
     }
 
     /**
-     * Called by the {@link ServerConnector} once the backend's JoinGame was relayed: switches the
-     * front-end into the play phase (for 1.20.2+ this is where it happens, for older clients
-     * {@link #onLoginSuccess} already did it), resumes reading the client and registers the
-     * player with the proxy.
+     * 由 {@link ServerConnector} 在后端发送的 JoinGame 数据包被转发后调用：
+     * 将前端切换至游戏阶段（对于 1.20.2+ 客户端，这是切换发生的时机；
+     * 对于旧版本客户端，{@link #onLoginSuccess} 已经完成了切换），
+     * 恢复对客户端的读取，并将该玩家注册到代理端。
      */
     public void onServerConnected(ServerConnection server) {
         this.server = server;
@@ -336,10 +347,9 @@ public class InitialHandler extends ChannelInboundHandlerAdapter {
 
         channel.config().setAutoRead(true);
 
-        // Registers the player and broadcasts the TabList header/footer (with the live %online%)
-        // to every connected player — including this one, whose front-end codecs were just
-        // switched to GAME. This also covers backends that never send a header/footer of their
-        // own (BungeeCord setTabHeader style).
+        // 注册该玩家，并向所有已连接的玩家广播 TabList 的头部/底部信息（包含实时的 %online% 占位符）
+        // —— 包括刚刚完成注册的这名玩家自身，因为它的前端编解码器刚刚切换到了 GAME 阶段。
+        // 此操作同样适用于那些本身从不发送头部/底部信息的后端服务器。
         proxy.playerJoined(user);
         proxy.getEventBus().postAsync(
                 new PlayerJoinEvent(username, uuid, protocolVersion, server.getHost(), server.getPort()));
@@ -347,12 +357,11 @@ public class InitialHandler extends ChannelInboundHandlerAdapter {
     }
 
     /**
-     * 1.20.2+ only: called once the proxy sent Login Success. The client is now in the
-     * configuration phase (not play), so the outbound codec switches to CONFIGURATION, the
-     * play-phase relay bridge is installed and reading is resumed — the client must be able to
-     * send its {@code LoginAcknowledged} and the configuration handshake. The inbound codec stays
-     * LOGIN until {@code LoginAcknowledged} advances it (BungeeCord
-     * {@code InitialHandler.handle(LoginSuccess)} / {@code cutThrough}).
+     * 仅限 1.20.2 及以上版本：在代理端发送 Login Success 后调用。
+     * 此时客户端处于配置阶段（而非游戏阶段），因此出站编解码器切换至 CONFIGURATION，
+     * 安装游戏阶段的转发桥接器并恢复读取——客户端必须能够发送其
+     * {@code LoginAcknowledged} 及配置阶段握手。
+     * 入站编解码器会保持在 LOGIN 状态，直到 {@code LoginAcknowledged} 推进它
      */
     public void enterConfiguration(ServerConnection server) {
         this.server = server;
@@ -368,9 +377,8 @@ public class InitialHandler extends ChannelInboundHandlerAdapter {
     }
 
     /**
-     * 1.20.2+ only: registers the player once the configuration phase completed (the backend sent
-     * its {@code FinishConfiguration}, right before Join Game), mirroring BungeeCord's
-     * {@code ServerConnectedEvent}.
+     * 仅限 1.20.2 及以上版本：在配置阶段完成后注册该玩家（后端发送了
+     * {@code FinishConfiguration}，紧接着将发送 Join Game），
      */
     public void onConfigurationDone(ServerConnection server) {
         this.server = server;

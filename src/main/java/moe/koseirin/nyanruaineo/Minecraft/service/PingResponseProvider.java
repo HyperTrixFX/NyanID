@@ -5,11 +5,6 @@ package moe.koseirin.nyanruaineo.Minecraft.service;
  * awa
  */
 
-/*
- * @author KoseiRin_
- * awa
- */
-
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import jakarta.annotation.PostConstruct;

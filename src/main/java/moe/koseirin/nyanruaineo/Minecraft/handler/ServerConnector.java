@@ -46,7 +46,7 @@ import moe.koseirin.nyanruaineo.Minecraft.protocol.packet.SetCompression;
 import moe.koseirin.nyanruaineo.Minecraft.protocol.packet.StartConfiguration;
 import moe.koseirin.nyanruaineo.Minecraft.protocol.packet.TabListHeaderFooter;
 import moe.koseirin.nyanruaineo.Minecraft.protocol.packet.ViewDistance;
-import moe.koseirin.nyanruaineo.Minecraft.service.BackendServer;
+import moe.koseirin.nyanruaineo.Minecraft.config.cfg.BackendServer;
 import moe.koseirin.nyanruaineo.Minecraft.service.PlayerStateService;
 
 import java.net.InetSocketAddress;
@@ -54,8 +54,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.Set;
 
 /**
- * Connects a logged-in client to the backend server and performs the login handshake, mirroring
- * BungeeCord's {@code ServerConnector}. On success it installs the play-phase bridges on both sides.
+ * 将一个已登录的客户端连接到后端服务器并执行登录握手。
+ * 成功后，会在两端安装游戏阶段的桥接器。
  */
 @Slf4j
 public class ServerConnector {

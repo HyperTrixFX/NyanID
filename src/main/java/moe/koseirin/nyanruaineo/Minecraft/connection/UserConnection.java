@@ -12,6 +12,7 @@ import moe.koseirin.nyanruaineo.Minecraft.forge.ForgeClientHandler;
 import moe.koseirin.nyanruaineo.Minecraft.forge.ForgeServerHandler;
 import moe.koseirin.nyanruaineo.Minecraft.protocol.packet.LoginSuccess;
 import moe.koseirin.nyanruaineo.Minecraft.protocol.packet.PluginMessage;
+import org.springframework.stereotype.Component;
 
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;

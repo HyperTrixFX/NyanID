@@ -5,11 +5,6 @@ package moe.koseirin.nyanruaineo.Minecraft.util;
  * awa
  */
 
-/*
- * @author KoseiRin_
- * awa
- */
-
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 

@@ -8,6 +8,7 @@ package moe.koseirin.nyanruaineo.Minecraft.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import moe.koseirin.nyanruaineo.Minecraft.MinecraftProxy;
+import moe.koseirin.nyanruaineo.Minecraft.config.cfg.BackendServer;
 import moe.koseirin.nyanruaineo.Minecraft.connection.ServerConnection;
 import moe.koseirin.nyanruaineo.Minecraft.connection.UserConnection;
 import moe.koseirin.nyanruaineo.Minecraft.handler.ServerConnector;
@@ -39,8 +40,12 @@ public class PlayerTransferService {
                 reply.accept("§cServer " + target.getName() + " is offline!");
                 return;
             }
-            reply.accept("§aConnecting to " + target.getUid() + "...");
-            transfer(user, target);
+            // Only report success when a transfer was actually started: a backend may deliver the
+            // same Connect/ConnectOther once per online player connection, so the duplicate must
+            // not emit a second "前往..." reply.
+            if (transfer(user, target)) {
+                reply.accept("§a前往 " + target.getUid() + "...");
+            }
         });
     }
 
@@ -48,13 +53,30 @@ public class PlayerTransferService {
      * The actual server switch: pause the client, bump the server generation (so the old
      * backend's close cannot tear the client down), close the old backend, then connect to the
      * new one.
+     *
+     * @return {@code true} when a switch was started; {@code false} when it was skipped (player
+     *         already disconnected, or a switch to some backend is already in progress).
      */
-    public void transfer(UserConnection user, BackendServer target) {
+    public boolean transfer(UserConnection user, BackendServer target) {
         if (user.getChannel() == null || !user.getChannel().isActive()) {
             log.info("Player {} disconnected before the transfer to {} could start",
                     user.getUsername(), target.getName());
-            return;
+            return false;
         }
+
+        // Idempotent check-and-set: with several players on one backend, the backend sends the
+        // same Connect/ConnectOther plugin message through every player connection, and each
+        // DownstreamBridge runs this branch. Only the first call may start the switch; the others
+        // are dropped so they don't spawn a second racing ServerConnector.
+        synchronized (user) {
+            if (user.isSwitchingServer()) {
+                log.debug("Player {} is already switching; ignoring duplicate transfer to {}",
+                        user.getUsername(), target.getName());
+                return false;
+            }
+            user.setSwitchingServer(true);
+        }
+
         log.info("Transferring {} to {} ({}:{})", user.getUsername(), target.getName(),
                 target.getHost(), target.getPort());
 
@@ -65,9 +87,8 @@ public class PlayerTransferService {
             user.getForgeClientHandler().resetHandshake();
         }
 
-        // Mark the switch in progress so UpstreamBridge discards the client's stale GAME frames
-        // until the new backend's JoinGame arrives (BungeeCord shouldHandle parity).
-        user.setSwitchingServer(true);
+        // The switch flag is now set (above), so UpstreamBridge discards the client's stale GAME
+        // frames until the new backend's JoinGame arrives (BungeeCord shouldHandle parity).
         user.getChannel().config().setAutoRead(false);
         user.nextServerGeneration();
         user.setServer(null);
@@ -75,5 +96,6 @@ public class PlayerTransferService {
             old.close();
         }
         new ServerConnector(proxy, user, target).connect();
+        return true;
     }
 }

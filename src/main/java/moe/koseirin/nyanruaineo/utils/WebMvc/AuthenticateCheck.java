@@ -74,15 +74,13 @@ public class AuthenticateCheck implements HandlerInterceptor {
 
     private boolean validateEventAndMethod(String event, String requestMethod, HttpServletResponse response) throws IOException {
         return switch (event) {
-            case "UA" -> // Upload Asset - PUT
-                    validateMethod(requestMethod, "PUT", response);
-            case "UD" -> // Upload Data - POST
-                    validateMethod(requestMethod, "POST", response);
-            case "GI" -> // Get Information - GET
+            case "0" -> // Get Information - GET
                     validateMethod(requestMethod, "GET", response);
-            case "ADMIN" -> // Admin operation - POST
+            case "1" -> // Upload Data - POST
                     validateMethod(requestMethod, "POST", response);
-            case "DE" -> // Delete - DELETE
+            case "2" -> // Upload Asset - PUT
+                    validateMethod(requestMethod, "PUT", response);
+            case "3" -> // Delete - DELETE
                     validateMethod(requestMethod, "DELETE", response);
             default -> {
                 PrintWriter(response, Err(ErrorCode.IllegalRequest.getMessage(), "Zako~Unknown action parameters MiaoWu~"), ErrorCode.IllegalRequest.getCode());

@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import moe.koseirin.nyanruaineo.Minecraft.MinecraftProxy;
 import moe.koseirin.nyanruaineo.Minecraft.config.ProxyProperties;
+import moe.koseirin.nyanruaineo.Minecraft.config.cfg.BackendServer;
 import moe.koseirin.nyanruaineo.Minecraft.connection.ServerConnection;
 import moe.koseirin.nyanruaineo.Minecraft.connection.UserConnection;
 import moe.koseirin.nyanruaineo.Minecraft.protocol.DefinedPacket;
@@ -32,18 +33,16 @@ import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * The proxy's side of the plugin messaging system, mirroring BungeeCord's
- * {@code DownstreamBridge.handle(PluginMessage)}: it implements every built-in sub-command of the
- * {@code BungeeCord} channel (Connect, ConnectOther, IP, PlayerCount, PlayerList, GetServers,
- * Message, GetServer, Forward, ForwardToPlayer, UUID, UUIDOther, ServerIP, KickPlayer, ...) and
- * the channel-registration helpers (the proxy's own {@code REGISTER}, the replay of the client's
- * registered channels and brand, and the per-server packet queue used by {@code Forward}).
+ * 代理端的插件消息系统一侧
+ * （代理端自身的 {@code REGISTER}、客户端已注册频道和品牌的回放
+ * 以及 {@code Forward} 所使用的每个服务器的数据包队列）
  */
 @Slf4j
 @Component
@@ -67,6 +66,16 @@ public class PluginMessageService {
      * (BungeeCord's per-{@code ServerInfo} packet queue, drained on the next connect).
      */
     private final Map<String, Queue<PluginMessage>> packetQueue = new ConcurrentHashMap<>();
+
+    /**
+     * 后端会通过每个在线玩家的连接重复下发同一条 {@code Connect}/{@code ConnectOther}；
+     * 用 (目标玩家, 服务器) 加一个短时窗口去重，保证每个逻辑请求只被处理一次。
+     * 访问都在 {@code connectDedupLock} 下，普通 {@link HashMap} 即可，无需额外并发结构。
+     */
+    private final Map<String, Long> recentConnectRequests = new HashMap<>();
+    private final Object connectDedupLock = new Object();
+    private static final long CONNECT_DEDUP_WINDOW_MS = 1_000L;
+
 
     /**
      * Builds the {@code REGISTER} packet that tells a backend (or the client) which channels the
@@ -180,24 +189,28 @@ public class PluginMessageService {
                         }
                     }
                 }
-                case "Connect" -> {
-                    BackendServer serverInfo = backendServerManager.findByName(in.readUTF());
-                    if (serverInfo != null) {
-                        // Fire-and-forget connect; errors are logged instead of kicking the player
-                        // (BungeeCord's plugin-message Connect never reports back either).
-                        playerTransferService.transferIfOnline(user, serverInfo,
-                                error -> log.warn("Plugin-message Connect of {} to {} failed: {}",
-                                        user.getUsername(), serverInfo.getName(), error));
+                case "Connect", "ConnectOther" -> {
+                    String targetName = in.readUTF();
+                    String serverName = in.readUTF();
+                    if (!claimConnect(targetName, serverName)) {
+                        break;
                     }
-                }
-                case "ConnectOther" -> {
-                    UserConnection target = playerQueryService.getUserConnection(in.readUTF());
-                    if (target != null) {
-                        BackendServer serverInfo = backendServerManager.findByName(in.readUTF());
-                        if (serverInfo != null) {
+                    UserConnection target = playerQueryService.getUserConnection(targetName);
+                    BackendServer serverInfo = backendServerManager.findByName(serverName);
+                    if (target != null && serverInfo != null) {
+                        ServerConnection current = target.getServer();
+                        if (current != null && !current.isClosed()
+                                && serverInfo.getHost() != null && serverInfo.getHost().equalsIgnoreCase(current.getHost())
+                                && serverInfo.getPort() == current.getPort()) {
+                            proxy.getPlayerMessageService().sendMessage(target, "§eYou are already connected to " + serverInfo.getName() + "!");
+                        }else {
                             playerTransferService.transferIfOnline(target, serverInfo,
-                                    error -> log.warn("Plugin-message ConnectOther of {} to {} failed: {}",
-                                            target.getUsername(), serverInfo.getName(), error));
+                                    error -> {});
+
+                        }
+                    }else {
+                        if (target != null) {
+                            proxy.getPlayerMessageService().sendMessage(target, "§e不存在该子服务器节点!");
                         }
                     }
                 }
@@ -331,7 +344,7 @@ public class PluginMessageService {
                     UserConnection target = playerQueryService.getUserConnection(in.readUTF());
                     if (target != null) {
                         String kickReason = in.readUTF();
-                        playerKickService.kick(target, kickReason);
+                        playerKickService.kick(target, kickReason,null);
                     }
                 }
                 case "KickPlayerRaw" -> {
@@ -339,7 +352,7 @@ public class PluginMessageService {
                     if (target != null) {
                         JSONObject component = parseComponent(in.readUTF());
                         String kickReason = component == null ? "" : flattenText(component);
-                        playerKickService.kick(target, kickReason);
+                        playerKickService.kick(target, kickReason,null);
                     }
                 }
                 default -> log.debug("Unknown BungeeCord channel sub-command '{}' from {}",
@@ -355,6 +368,28 @@ public class PluginMessageService {
             }
         } catch (IOException e) {
             log.warn("Malformed BungeeCord channel message from {}: {}", server.getHost(), e.getMessage());
+        }
+    }
+
+    /**
+     * 去重判断：返回 {@code true} 表示这条 {@code Connect}/{@code ConnectOther} 应该被处理，
+     * {@code false} 表示它是窗口期内重复下发的一份拷贝。窗口很短（约 1 秒），足够吞掉后端
+     * 同时通过多条玩家连接下发的重复包，又不影响正常的后续传送请求。
+     */
+    private boolean claimConnect(String targetName, String serverName) {
+        String key = targetName + '\0' + serverName;
+        long now = System.currentTimeMillis();
+        synchronized (connectDedupLock) {
+            // 机会式清理，防止 map 无限增长。
+            if (recentConnectRequests.size() > 256) {
+                recentConnectRequests.values().removeIf(ts -> now - ts >= CONNECT_DEDUP_WINDOW_MS);
+            }
+            Long prev = recentConnectRequests.get(key);
+            if (prev != null && now - prev < CONNECT_DEDUP_WINDOW_MS) {
+                return false;
+            }
+            recentConnectRequests.put(key, now);
+            return true;
         }
     }
 

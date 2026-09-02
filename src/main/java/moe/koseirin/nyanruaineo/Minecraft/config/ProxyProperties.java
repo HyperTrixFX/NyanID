@@ -12,8 +12,8 @@ import moe.koseirin.nyanruaineo.Minecraft.config.cfg.FirewallConfig;
 import moe.koseirin.nyanruaineo.Minecraft.config.cfg.KickMessageConfig;
 import moe.koseirin.nyanruaineo.Minecraft.config.cfg.MotdConfig;
 import moe.koseirin.nyanruaineo.Minecraft.config.cfg.TabListConfig;
-import moe.koseirin.nyanruaineo.Minecraft.service.BackendServer;
-import moe.koseirin.nyanruaineo.Minecraft.service.ServerListConfig;
+import moe.koseirin.nyanruaineo.Minecraft.config.cfg.BackendServer;
+import moe.koseirin.nyanruaineo.Minecraft.config.cfg.ServerListConfig;
 import moe.koseirin.nyanruaineo.utils.System.SystemConfigCacheService;
 import org.springframework.stereotype.Component;
 
@@ -105,7 +105,7 @@ public class ProxyProperties {
                     migrated.setDefaultServer(null);
                 } else {
                     migratedList.sort(Comparator.comparingInt(BackendServer::getPriority));
-                    migrated.setDefaultServer(migratedList.get(0).getName());
+                    migrated.setDefaultServer(migratedList.getFirst().getName());
                 }
                 try {
                     cacheService.updateConfig(KEY_BACKEND_SERVERS, JSON.toJSONString(migrated));

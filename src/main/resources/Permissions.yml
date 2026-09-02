@@ -2,7 +2,7 @@ permissions:
   default:
     - bungeecord.command.server
     - bungeecord.command.list
-  admin:
+  96c6500f-4c9c-4fd2-86a5-e633862022be:
     - bungeecord.command.alert
     - bungeecord.command.alertraw
     - bungeecord.command.end

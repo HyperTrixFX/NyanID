@@ -5,12 +5,7 @@ package moe.koseirin.nyanruaineo.Minecraft.util;
  * awa
  */
 
-/*
- * @author KoseiRin_
- * awa
- */
 
-import moe.koseirin.nyanruaineo.Minecraft.config.ProxyProperties;
 import moe.koseirin.nyanruaineo.Minecraft.config.cfg.MotdConfig;
 import org.springframework.stereotype.Component;
 
