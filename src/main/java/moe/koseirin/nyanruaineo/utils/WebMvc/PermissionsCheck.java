@@ -63,7 +63,7 @@ public class PermissionsCheck implements HandlerInterceptor {
             PrintWriter(response,Err(ErrorCode.Unauthorized.getMessage(),"Zako~Authentication failed, invalid token MiaoWu~ "),ErrorCode.Unauthorized.getCode());
             return false;
         }
-        if (banUserRepository.LEVE450TRUE(userId) != null) {
+        if (!banUserRepository.LEVE450TRUE(userId).isEmpty()) {
             PrintWriter(response,Err(ErrorCode.Unauthorized.getMessage(),"Zako~account is banned for admin MiaoWu~ "),ErrorCode.Unauthorized.getCode());
             return false;
         }

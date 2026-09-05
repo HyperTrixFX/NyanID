@@ -34,7 +34,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Base64;
-import java.util.Random;
 import java.util.UUID;
 import java.util.logging.Logger;
 
@@ -49,6 +48,9 @@ public class utilset {
     public static final String RANDOM_NUMBER_ALGORITHM = "SHA1PRNG";
     static int window_size = 1;
     static long second_per_size = 30L;
+
+    /** 安全随机源：所有令牌/验证码/密钥必须使用它，禁止使用 {@code java.util.Random}。 */
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private final StrictIpResolver strictIpResolver;
 
@@ -182,18 +184,12 @@ public class utilset {
      * @return SecretKey
      */
     public String generateSecretKey() {
-        SecureRandom sr;
-        try {
-            sr = SecureRandom.getInstance(RANDOM_NUMBER_ALGORITHM);
-            sr.setSeed(getSeed());
-            byte[] buffer = sr.generateSeed(SECRET_SIZE);
-            Base32 codec = new Base32();
-            byte[] bEncodedKey = codec.encode(buffer);
-            String ret = new String(bEncodedKey);
-            return ret.replaceAll("=+$", "");// 移除末尾的等号
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(e);
-        }
+        byte[] buffer = new byte[SECRET_SIZE];
+        SECURE_RANDOM.nextBytes(buffer);
+        Base32 codec = new Base32();
+        byte[] bEncodedKey = codec.encode(buffer);
+        String ret = new String(bEncodedKey);
+        return ret.replaceAll("=+$", "");// 移除末尾的等号
     }
 
     /**
@@ -259,22 +255,14 @@ public class utilset {
         return (int) truncatedHash;
     }
 
-    private static byte[] getSeed() {
-        String str = ISSUER + System.currentTimeMillis() + ISSUER;
-        return str.getBytes(StandardCharsets.UTF_8);
-    }
-
-
-
     /**
      * @param length 随机数长度
      */
     public String RandomNumber(int length) {
         String characters = "0123456789";
         StringBuilder flt = new StringBuilder();
-        Random random = new Random();
         for (int i = 0; i < length; i++) {
-            int index = random.nextInt(characters.length());
+            int index = SECURE_RANDOM.nextInt(characters.length());
             flt.append(characters.charAt(index));
         }
         return flt.toString();
@@ -285,8 +273,7 @@ public class utilset {
         return !targetDateTime.isBefore(cutoffDateTime);
     }
     public static int RandomIntNumberW() {
-        Random random = new Random();
-        return random.nextInt(90) + 10;
+        return SECURE_RANDOM.nextInt(90) + 10;
     }
 
     /**
@@ -295,9 +282,8 @@ public class utilset {
     public  String RandomString(int length) {
         String characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
         StringBuilder flt = new StringBuilder();
-        Random random = new Random();
         for (int i = 0; i < length; i++) {
-            int index = random.nextInt(characters.length());
+            int index = SECURE_RANDOM.nextInt(characters.length());
             flt.append(characters.charAt(index));
         }
         return flt.toString();

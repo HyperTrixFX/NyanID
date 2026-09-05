@@ -35,7 +35,7 @@ public class OpCommand implements Command {
         if (args.length > 0) {
             if (args[0] != null){
                 //op <uid> —— 授予 uid 根权限（*）
-                permissionService.grant(args[0], PermissionNodes.ROOT);
+                permissionService.grantByCMD(args[0], PermissionNodes.ROOT);
                 Logger.getLogger("NyanID").info("已授予 uid [" + args[0] + "] root权限");
             }else Logger.getLogger("NyanID").info("请输入uid");
 

@@ -24,13 +24,13 @@ public class UserSecurityController {
 
 
     @PostMapping("user/2fa/open2fa")
-    public ResponseEntity<?> Open2fa(HttpServletRequest request){
-        return userSecurityServices.Open2FA(request);
+    public ResponseEntity<?> Open2fa(HttpServletRequest request, @RequestParam(required = false) String password){
+        return userSecurityServices.Open2FA(request, password);
     }
 
     @PostMapping("user/2fa/close2fa")
-    public ResponseEntity<?> Close2fa(HttpServletRequest request){
-        return userSecurityServices.Close2FA(request);
+    public ResponseEntity<?> Close2fa(HttpServletRequest request, @RequestParam(required = false) String code){
+        return userSecurityServices.Close2FA(request, code);
     }
 
     @GetMapping("user/devices")
@@ -39,8 +39,8 @@ public class UserSecurityController {
     }
 
     @DeleteMapping("user/devices")
-    public ResponseEntity<?> DeleteDevices(@RequestBody DeleteDevicesDTO deleteDevicesDTO) {
-        return userSecurityServices.DeleteDevices(deleteDevicesDTO.getValue());
+    public ResponseEntity<?> DeleteDevices(@RequestBody DeleteDevicesDTO deleteDevicesDTO, HttpServletRequest request) {
+        return userSecurityServices.DeleteDevices(deleteDevicesDTO.getValue(), request);
     }
 
 

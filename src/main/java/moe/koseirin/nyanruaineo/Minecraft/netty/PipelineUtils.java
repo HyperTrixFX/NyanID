@@ -6,6 +6,7 @@ package moe.koseirin.nyanruaineo.Minecraft.netty;
  */
 
 import io.netty.channel.ChannelPipeline;
+import io.netty.handler.timeout.ReadTimeoutHandler;
 import moe.koseirin.nyanruaineo.Minecraft.protocol.Direction;
 import moe.koseirin.nyanruaineo.Minecraft.protocol.Protocol;
 import moe.koseirin.nyanruaineo.Minecraft.protocol.ProtocolConstants;
@@ -26,6 +27,8 @@ public final class PipelineUtils {
      * 而发往客户端的数据（出站）会按照 {@link Direction#TO_CLIENT} 的方向进行编码。
      */
     public static HandlerBoss initFrontendPipeline(ChannelPipeline pipeline) {
+        // 读超时：缓解 slowloris（客户端只建连不发数据的慢速连接耗尽连接资源）
+        pipeline.addLast("read-timeout", new ReadTimeoutHandler(60));
         pipeline.addLast(ProtocolConstants.FRAME_PREPENDER, new Varint21LengthFieldPrepender());
         pipeline.addLast(ProtocolConstants.FRAME_DECODER, new Varint21FrameDecoder());
         pipeline.addLast(ProtocolConstants.PACKET_DECODER, new PacketDecoder(Protocol.HANDSHAKE, Direction.TO_SERVER));

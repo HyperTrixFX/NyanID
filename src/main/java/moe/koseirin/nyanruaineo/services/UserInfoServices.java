@@ -72,7 +72,7 @@ public class UserInfoServices {
 
     @Transactional
     public ResponseEntity<?> getPublicUserInfo(String uuid, HttpServletRequest request){
-        if (banUserRepository.LEVE450TRUE(uuid) == null ) {
+        if (banUserRepository.LEVE450TRUE(uuid).isEmpty() ) {
             if (accountsRepository.GetUser(uuid) != null){
                 Accounts accounts = accountsRepository.GetUser(uuid);
                 NyanIDuser user = nyanIDuserRepository.getUser(accounts.getUid());
@@ -160,7 +160,6 @@ public class UserInfoServices {
             }else {
                 jsonObject.put("have2fa",false);
             }
-            //TODO 用户权限
             List<String> adminPermissions = Arrays.asList(PermissionNodes.ROOT, PermissionNodes.NYANID_ADMIN, PermissionNodes.PROXY_ADMIN);
             if (adminPermissions.stream().anyMatch(p -> permissionService.hasPermission(uid, p))){
                 jsonObject.put("isAdmin",true);

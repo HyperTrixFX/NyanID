@@ -1,6 +1,7 @@
 package moe.koseirin.nyanruaineo.utils.WebMvc;
 
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -29,21 +30,36 @@ public class StrictIpResolver {
             "unknown", "undefined", "null", "0.0.0.0", "255.255.255.255"
     );
 
+    /** 受信反向代理 IP（逗号分隔）。仅当直连对端命中该列表时才信任 X-Forwarded-For 等转发头。 */
+    @Value("${NyanidSetting.trustedProxyIps:}")
+    private String trustedProxyIps;
+
     public String getStrictClientIp(HttpServletRequest request) {
         String directIp = request.getRemoteAddr();
-        String xff = request.getHeader("X-Forwarded-For");
-        String candidateIp = parseXForwardedForStrictly(xff, directIp);
-        if (!isValidAndTrustworthyIp(candidateIp)) {
-            candidateIp = checkOtherHeadersStrictly(request);
+        // 仅在直连对端是受信代理时才解析转发头；否则一律用直连 IP，防止伪造 XFF 绕过限流/封禁。
+        if (isTrustedProxy(directIp)) {
+            String xff = request.getHeader("X-Forwarded-For");
+            String candidateIp = parseXForwardedForStrictly(xff, directIp);
+            if (!isValidAndTrustworthyIp(candidateIp)) {
+                candidateIp = checkOtherHeadersStrictly(request);
+            }
+            if (isValidAndTrustworthyIp(candidateIp)) {
+                return sanitizeIp(candidateIp);
+            }
         }
-        if (!isValidAndTrustworthyIp(candidateIp)) {
-            candidateIp = directIp;
-        }
-        if (isSuspiciousRequest(request, candidateIp, directIp)) {
-            logSuspiciousRequest(request, candidateIp, directIp);
-        }
+        return sanitizeIp(directIp);
+    }
 
-        return sanitizeIp(candidateIp);
+    private boolean isTrustedProxy(String ip) {
+        if (ip == null || trustedProxyIps == null || trustedProxyIps.isBlank()) {
+            return false;
+        }
+        for (String trusted : trustedProxyIps.split(",")) {
+            if (trusted.trim().equals(ip)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private String parseXForwardedForStrictly(String xff, String directIp) {

@@ -4,7 +4,6 @@ import com.alibaba.fastjson2.JSONObject;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import moe.koseirin.nyanruaineo.entity.Accounts;
-import moe.koseirin.nyanruaineo.entity.BanUserList;
 import moe.koseirin.nyanruaineo.entity.NyanIDuser;
 import moe.koseirin.nyanruaineo.repository.AccountsRepository;
 import moe.koseirin.nyanruaineo.repository.BanUserRepository;
@@ -12,6 +11,7 @@ import moe.koseirin.nyanruaineo.repository.NyanIDuserRepository;
 import moe.koseirin.nyanruaineo.repository.UserDevicesRepository;
 import moe.koseirin.nyanruaineo.services.impl.UserDataImpl;
 import moe.koseirin.nyanruaineo.utils.EmailHelper.EmailService;
+import moe.koseirin.nyanruaineo.utils.PasswordHasher;
 import moe.koseirin.nyanruaineo.utils.RedisUtils.RedisService;
 import moe.koseirin.nyanruaineo.utils.Respond;
 import moe.koseirin.nyanruaineo.utils.WebMvc.StrictIpResolver;
@@ -37,6 +37,7 @@ public class UserDataServices {
     private final EmailService emailService;
     private final RedisService redisService;
     private final utilset utilset;
+    private final PasswordHasher passwordHasher;
     private final Respond respond;
     private final BanUserRepository banUserRepository;
     private final UserDevicesRepository userDevicesRepository;
@@ -44,11 +45,12 @@ public class UserDataServices {
     private final UserDataImpl userDataImpl;
     private final NyanIDuserRepository nyanIDuserRepository;
 
-    public UserDataServices(AccountsRepository accountsRepository, EmailService emailService, RedisService redisService, utilset utilset, Respond respond, BanUserRepository banUserRepository, UserDevicesRepository userDevicesRepository, StrictIpResolver strictIpResolver, UserDataImpl userDataImpl, NyanIDuserRepository nyanIDuserRepository) {
+    public UserDataServices(AccountsRepository accountsRepository, EmailService emailService, RedisService redisService, utilset utilset, PasswordHasher passwordHasher, Respond respond, BanUserRepository banUserRepository, UserDevicesRepository userDevicesRepository, StrictIpResolver strictIpResolver, UserDataImpl userDataImpl, NyanIDuserRepository nyanIDuserRepository) {
         this.accountsRepository = accountsRepository;
         this.emailService = emailService;
         this.redisService = redisService;
         this.utilset = utilset;
+        this.passwordHasher = passwordHasher;
         this.respond = respond;
         this.banUserRepository = banUserRepository;
         this.userDevicesRepository = userDevicesRepository;
@@ -58,9 +60,6 @@ public class UserDataServices {
     }
 
     public String EventID = "FP1";
-
-    @Value("${NyanidSetting.encryptionKey}")
-    private String encryptionKey;
 
     @Value("${yggdrasil.publicKey}")
     private String  publicKey;
@@ -83,22 +82,28 @@ public class UserDataServices {
         if (redisService.getValue(String.valueOf(Event)) != null) {
             return respond.respond(MediaType.APPLICATION_JSON,403, "message","请稍后重试喵!","timestamp", LocalDateTime.now());
         }
+        // 按 IP 限流，防止对任意邮箱轰炸
+        String clientIp = strictIpResolver.getStrictClientIp(request);
+        if (redisService.getValue("forgetpwd_ip:" + clientIp) != null) {
+            return respond.respond(MediaType.APPLICATION_JSON,429, "message","请求过于频繁，请稍后再试喵!","timestamp", LocalDateTime.now());
+        }
         Accounts accounts = accountsRepository.GetUser(email);
         if (accounts == null) {
-            return respond.respond(MediaType.APPLICATION_JSON,401, "message","The account doesn't exist or is locked because of a password error 杂鱼喵!","timestamp", LocalDateTime.now());
+            // 防账号枚举：账号不存在时也返回统一成功文案
+            return respond.respond(MediaType.APPLICATION_JSON,200, "message","验证码已发送至邮箱（若该邮箱已注册）","timestamp", LocalDateTime.now());
         }
-        BanUserList banUserList = banUserRepository.LEVE450TRUE(accounts.getUid());
-        if (banUserList != null){
-            return respond.respond(MediaType.APPLICATION_JSON,401, "message","异常等级LEVEL"+banUserList.getType()+",异常原因"+banUserList.getReason()+",处罚ID"+banUserList.getBanID()+"账户状态异常,无法修改密码杂鱼喵!","timestamp", LocalDateTime.now());
+        if (banUserRepository.existsByUidAndIsActiveTrue(accounts.getUid())) {
+            return respond.respond(MediaType.APPLICATION_JSON,403, "message","账户状态异常，资料为只读，无法修改密码杂鱼喵!","timestamp", LocalDateTime.now());
         }
         String token = utilset.GetSessionUUID(request,accounts.getUid());
-        String code = utilset.RandomString(8);
+        String code = utilset.RandomString(16);
         JSONObject object = new JSONObject();
         object.put("uid",accounts.getUid());
         object.put("token",token);
         object.put("email",email);
         redisService.setValueWithExpiration(code,object,300, java.util.concurrent.TimeUnit.SECONDS);
         redisService.setValueWithExpiration(String.valueOf(Event),1,300, java.util.concurrent.TimeUnit.SECONDS);
+        redisService.setValueWithExpiration("forgetpwd_ip:" + clientIp, "1", 60, java.util.concurrent.TimeUnit.SECONDS);
         emailService.sendVerificationCode(email,code);
         return respond.respond(MediaType.APPLICATION_JSON,200,"message","验证码已发送至邮箱","token",utilset.encrypt(token,publicKey),"timestamp",LocalDateTime.now());
     }
@@ -122,7 +127,12 @@ public class UserDataServices {
             return respond.respond(MediaType.APPLICATION_JSON,403, "message","验证码错误或已过期喵!","timestamp", LocalDateTime.now());
         }
         String uid = object.getString("uid");
-        accountsRepository.UpdatePassword(uid, utilset.HMACSHA256(encryptionKey,pwd));
+        if (banUserRepository.existsByUidAndIsActiveTrue(uid)) {
+            return respond.respond(MediaType.APPLICATION_JSON,403, "message","账户状态异常，资料为只读，无法修改密码杂鱼喵!","timestamp", LocalDateTime.now());
+        }
+        accountsRepository.UpdatePassword(uid, passwordHasher.hash(pwd));
+        // 验证码单次消费，防止重放
+        redisService.deleteValue(code);
         emailService.NotificationEmail(object.getString("email"), strictIpResolver.getStrictClientIp(request), "修改密码", uid);
         return respond.respond(MediaType.APPLICATION_JSON,200,"message","The password was successfully changed 杂鱼喵~","timestamp",LocalDateTime.now());
     }
@@ -132,6 +142,9 @@ public class UserDataServices {
         Accounts accounts = GetUser(request);
         if (accounts == null) {
             return respond.respond(MediaType.APPLICATION_JSON,500, "message","未知登录绕过喵！！！","timestamp", LocalDateTime.now());
+        }
+        if (banUserRepository.existsByUidAndIsActiveTrue(accounts.getUid())) {
+            return respond.respond(MediaType.APPLICATION_JSON,403, "message","账户状态异常，资料为只读，无法修改喵!","timestamp", LocalDateTime.now());
         }
         NyanIDuser nyanIDuser = nyanIDuserRepository.getUser(accounts.getUid());
         return switch (action) {
@@ -171,6 +184,12 @@ public class UserDataServices {
             return respond.respond(MediaType.APPLICATION_JSON,403, "message","RequestParam avatar is not image MiaoWu~","timestamp", LocalDateTime.now());
         }
         Accounts accounts = GetUser(request);
+        if (accounts == null) {
+            return respond.respond(MediaType.APPLICATION_JSON,500, "message","未知登录绕过喵！！！","timestamp", LocalDateTime.now());
+        }
+        if (banUserRepository.existsByUidAndIsActiveTrue(accounts.getUid())) {
+            return respond.respond(MediaType.APPLICATION_JSON,403, "message","账户状态异常，资料为只读，无法修改喵!","timestamp", LocalDateTime.now());
+        }
         SaveUserAvatar(accounts.getUid(), avatar);
         return respond.respond(MediaType.APPLICATION_JSON,200, "message","Setting avatar success MiaoWu~","timestamp", LocalDateTime.now());
 

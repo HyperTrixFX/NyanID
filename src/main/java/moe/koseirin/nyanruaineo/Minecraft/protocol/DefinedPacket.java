@@ -29,12 +29,15 @@ public abstract class DefinedPacket {
         } while (value != 0);
     }
 
+    /** 单个数组/字符串解码的上限（2 MiB），防止恶意声明超大长度导致 OOM。 */
+    private static final int MAX_READ_LENGTH = 2 * 1024 * 1024;
+
     public static int readVarInt(ByteBuf input) {
         int result = 0;
         int shift = 0;
         byte b;
         do {
-            if (shift > 35) {
+            if (shift >= 35) {
                 throw new IllegalArgumentException("VarInt too big");
             }
             b = input.readByte();
@@ -100,6 +103,9 @@ public abstract class DefinedPacket {
 
     public static byte[] readArray(ByteBuf input) {
         int length = readVarInt(input);
+        if (length < 0 || length > MAX_READ_LENGTH || length > input.readableBytes()) {
+            throw new IllegalArgumentException("Array length out of bounds: " + length);
+        }
         byte[] bytes = new byte[length];
         input.readBytes(bytes);
         return bytes;

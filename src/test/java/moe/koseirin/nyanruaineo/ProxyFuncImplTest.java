@@ -10,8 +10,13 @@ import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import moe.koseirin.nyanruaineo.Minecraft.MinecraftProxy;
 import moe.koseirin.nyanruaineo.Minecraft.config.cfg.BackendServer;
+import moe.koseirin.nyanruaineo.Minecraft.service.BackendServerManager;
+import moe.koseirin.nyanruaineo.Minecraft.service.PlayerKickService;
 import moe.koseirin.nyanruaineo.Minecraft.service.PlayerQueryService;
+import moe.koseirin.nyanruaineo.Minecraft.service.PlayerTransferService;
+import moe.koseirin.nyanruaineo.dto.BackendServerStatusDTO;
 import moe.koseirin.nyanruaineo.services.impl.ProxyFuncImpl;
+import moe.koseirin.nyanruaineo.utils.Respond;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -31,6 +36,12 @@ class ProxyFuncImplTest {
     private MinecraftProxy proxy;          // 未被使用，可保留 mock
     @Mock
     private PlayerQueryService playerQueryService;
+    @Mock
+    private BackendServerManager backendServerManager;
+    @Mock
+    private PlayerTransferService playerTransferService;
+    @Mock
+    private PlayerKickService playerKickService;
 
     private FakeSystemConfigCacheService cacheService;  // 使用 Fake
     private ProxyFuncImpl proxyFunc;
@@ -44,7 +55,8 @@ class ProxyFuncImplTest {
         cacheService.putConfig(KEY_BACKEND_SERVERS, createInitialConfigJson());
 
         // 手动创建 ProxyFuncImpl，注入 Fake
-        proxyFunc = new ProxyFuncImpl(proxy, playerQueryService, cacheService);
+        proxyFunc = new ProxyFuncImpl(proxy, playerQueryService, cacheService, backendServerManager,
+                playerTransferService, playerKickService, new Respond());
     }
 
     private String createInitialConfigJson() {
@@ -61,7 +73,7 @@ class ProxyFuncImplTest {
 
     @Test
     void testGetAllServers_ReturnsList() {
-        List<BackendServer> servers = proxyFunc.getAllServers();
+        List<BackendServerStatusDTO> servers = proxyFunc.getAllServers();
         assertEquals(2, servers.size());
         assertEquals("lobby", servers.get(0).getName());
     }
@@ -216,7 +228,7 @@ class ProxyFuncImplTest {
 
         // 恢复 getConfig 正常
         cacheService.clearThrowOnGet();
-        List<BackendServer> servers = proxyFunc.getAllServers();
+        List<BackendServerStatusDTO> servers = proxyFunc.getAllServers();
         assertEquals(2, servers.size(), "锁应被释放，后续操作可正常进行");
     }
 }

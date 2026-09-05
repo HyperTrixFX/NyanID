@@ -114,7 +114,8 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<?> handleGenericException() {
+    public ResponseEntity<?> handleGenericException(Exception ex) {
+        log.error("Unhandled exception", ex);
         return respond.respond(MediaType.APPLICATION_JSON, 500,
                 Res("Internal server error occurred", LocalDateTime.now(), "Exception"));
     }
@@ -158,6 +159,7 @@ public class GlobalExceptionHandler {
 
 
     private Object[] Res(String message,LocalDateTime timestamp,String exception){
-      return new Object[]{"message",message, "timestamp",timestamp, "Exception", exception};
+      // 不回显内部异常类名，避免信息泄露
+      return new Object[]{"message",message, "timestamp",timestamp};
     }
 }

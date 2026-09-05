@@ -6,6 +6,7 @@ package moe.koseirin.nyanruaineo.server.YggdrasilServer;
  */
 
 import jakarta.servlet.http.HttpServletRequest;
+import moe.koseirin.nyanruaineo.repository.BanUserRepository;
 import moe.koseirin.nyanruaineo.repository.UserDevicesRepository;
 import moe.koseirin.nyanruaineo.repository.YggdrasilPlayerRepository;
 import moe.koseirin.nyanruaineo.repository.YggdrasilRepository;
@@ -48,6 +49,7 @@ public class Textures {
     private final YggdrasilPlayerRepository yggdrasilPlayerRepository;
     private final YggdrasilRepository yggdrasilRepository;
     private final UserDevicesRepository userDevicesRepository;
+    private final BanUserRepository banUserRepository;
     private final utilset utilset;
     private final TexturesListService texturesListService;
     private final Respond respond;
@@ -67,10 +69,11 @@ public class Textures {
             (byte) 0x06
     };
 
-    public Textures(YggdrasilPlayerRepository yggdrasilPlayerRepository, YggdrasilRepository yggdrasilRepository, UserDevicesRepository userDevicesRepository, utilset utilset, TexturesListService texturesListService, Respond respond) {
+    public Textures(YggdrasilPlayerRepository yggdrasilPlayerRepository, YggdrasilRepository yggdrasilRepository, UserDevicesRepository userDevicesRepository, BanUserRepository banUserRepository, utilset utilset, TexturesListService texturesListService, Respond respond) {
         this.yggdrasilPlayerRepository = yggdrasilPlayerRepository;
         this.yggdrasilRepository = yggdrasilRepository;
         this.userDevicesRepository = userDevicesRepository;
+        this.banUserRepository = banUserRepository;
         this.utilset = utilset;
         this.texturesListService = texturesListService;
         this.respond = respond;
@@ -82,6 +85,9 @@ public class Textures {
         String raw = Authorization.replace("Bearer ", "").replace(" ", "");
         String Token = utilset.decrypt(raw, privateKey);
         String uid = userDevicesRepository.findUidByToken(Token);
+        if (uid == null || banUserRepository.existsByUidAndIsActiveTrue(uid)) {
+            return CompletableFuture.completedFuture(respond.respond(MediaType.APPLICATION_JSON, 403, new ErrorResponse("账户状态异常，资料为只读，无法修改", "ForbiddenOperationException", "ForbiddenOperationException")));
+        }
         if (yggdrasilRepository.GetPlayerNAME(uid) == null) {
             return CompletableFuture.completedFuture(respond.respond(MediaType.APPLICATION_JSON, 400,new ErrorResponse("您不存在Yggdrasil账户", "Illegal Request", "Illegal Request")));
         }
@@ -139,6 +145,9 @@ public class Textures {
         String raw = Authorization.replace("Bearer ", "").replace(" ", "");
         String Token = utilset.decrypt(raw, privateKey);
         String uid = userDevicesRepository.findUidByToken(Token);
+        if (uid == null || banUserRepository.existsByUidAndIsActiveTrue(uid)) {
+            return CompletableFuture.completedFuture(respond.respond(MediaType.APPLICATION_JSON, 403, new ErrorResponse("账户状态异常，资料为只读，无法修改", "ForbiddenOperationException", "ForbiddenOperationException")));
+        }
         if (yggdrasilRepository.GetPlayerNAME(uid) == null) {
             return CompletableFuture.completedFuture(respond.respond(MediaType.APPLICATION_JSON, 400,new ErrorResponse("您不存在Yggdrasil账户", "Illegal Request", "Illegal Request")));
         }
@@ -202,6 +211,14 @@ public class Textures {
             byte[] Header = {Infile[0], Infile[1], Infile[2], Infile[3], Infile[4], Infile[5], Infile[6], Infile[7],
                     Infile[8], Infile[9], Infile[10], Infile[11], Infile[12], Infile[13], Infile[14], Infile[15]};
             if (Arrays.equals(Header, PNG_HEADER)) {
+                // 解析宽高，限制尺寸，防止高分辨率低熵 PNG 解压炸弹导致 OOM
+                long width = ((long)(Infile[16] & 0xFF) << 24) | ((long)(Infile[17] & 0xFF) << 16)
+                        | ((long)(Infile[18] & 0xFF) << 8) | (Infile[19] & 0xFF);
+                long height = ((long)(Infile[20] & 0xFF) << 24) | ((long)(Infile[21] & 0xFF) << 16)
+                        | ((long)(Infile[22] & 0xFF) << 8) | (Infile[23] & 0xFF);
+                if (width <= 0 || height <= 0 || width > 1024 || height > 1024) {
+                    return false;
+                }
                 byte[] ColorType = {Infile[25]};
                 byte[] CompressionMethodAndInterlaceMethod = {Infile[26], Infile[27]};
                 byte[] CRC = {Infile[29], Infile[30], Infile[31], Infile[32]};

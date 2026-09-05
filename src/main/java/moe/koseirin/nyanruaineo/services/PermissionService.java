@@ -113,6 +113,11 @@ public class PermissionService {
             return;
         }
         String normalized = node.trim();
+        // 禁止授予根节点 `*` 或通配节点（如 `minecraftproxy.*`），防止有限管理员一步提权为全量超管
+        if (PermissionNodes.ROOT.equals(normalized) || normalized.endsWith(".*")) {
+            log.warn("Blocked attempt to grant wildcard/root permission '{}' to uid {}", normalized, uid);
+            return;
+        }
         ensureCatalogEntry(normalized);
         if (!userPermissionsRepository.existsByUidAndPermission(uid, normalized)) {
             UserPermissions grant = new UserPermissions();
@@ -123,6 +128,27 @@ public class PermissionService {
             log.info("Granted permission '{}' to uid {}", normalized, uid);
         }
     }
+
+    //只能在终端进行root授权
+    @Transactional
+    public void grantByCMD(String uid, String node) {
+        if (uid == null || uid.isBlank() || node == null || node.isBlank()) {
+            return;
+        }
+        String normalized = node.trim();
+        ensureCatalogEntry(normalized);
+        if (!userPermissionsRepository.existsByUidAndPermission(uid, normalized)) {
+            UserPermissions grant = new UserPermissions();
+            grant.setUid(uid);
+            grant.setPermission(normalized);
+            grant.setGrantedAt(LocalDateTime.now());
+            userPermissionsRepository.save(grant);
+            log.info("Granted permission '{}' to uid {}", normalized, uid);
+        }
+    }
+
+
+
 
     /** 回收某个权限节点。 */
     @Transactional

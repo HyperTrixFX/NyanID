@@ -42,4 +42,10 @@ public final class PermissionNodes {
     public static final String COMMAND_BAN = "minecraftproxy.command.ban";
 
     public static final String NYANID_ADMIN = "nyanid.admin.cctop";
+
+    /** 用户管理权限：V3 用户列表/详情/编辑/封禁/解封/权限。 */
+    public static final String USER_ADMIN = "nyanid.admin.user";
+
+    /** 工单管理权限：V3 工单查看与处理。 */
+    public static final String TICKET_ADMIN = "nyanid.admin.ticket";
 }

@@ -36,7 +36,7 @@ public class GetResource {
 
     @GetMapping
     public ResponseEntity<?> GetImgResource(@PathVariable String type, @PathVariable String data) throws IOException {
-        if (banUserRepository.LEVE450TRUE(data) != null) {
+        if (!banUserRepository.LEVE450TRUE(data).isEmpty()) {
             return respond.respond(MediaType.APPLICATION_JSON, 404,
                     new ErrorResponse("Not Found User Avatar", "Not Found", "Not Found"));
         }

@@ -7,6 +7,8 @@ package moe.koseirin.nyanruaineo.repository;
 
 import jakarta.transaction.Transactional;
 import moe.koseirin.nyanruaineo.entity.NyanIDuser;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -49,4 +51,8 @@ public interface NyanIDuserRepository extends JpaRepository<NyanIDuser, String>,
 
 
     List<NyanIDuser> findByNicknameContaining(String nickname);
+
+    /** 分页列出开发者用户。 */
+    @Query("SELECT n FROM NyanIDuser n WHERE n.IsDeveloper = true")
+    Page<NyanIDuser> findDevelopers(Pageable pageable);
 }

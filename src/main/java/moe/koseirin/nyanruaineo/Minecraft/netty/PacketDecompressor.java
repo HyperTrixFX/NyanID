@@ -23,11 +23,18 @@ import java.util.zip.Inflater;
 @Slf4j
 public class PacketDecompressor extends ByteToMessageDecoder {
 
+    /** 解压后单帧上限（2 MiB），防止解压炸弹导致 OOM。 */
+    private static final int MAX_UNCOMPRESSED = 2 * 1024 * 1024;
+
     private final Inflater inflater = new Inflater();
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
         int uncompressedSize = DefinedPacket.readVarInt(in);
+
+        if (uncompressedSize < 0 || uncompressedSize > MAX_UNCOMPRESSED) {
+            throw new CorruptedFrameException("Invalid uncompressed size: " + uncompressedSize);
+        }
 
         if (uncompressedSize == 0) {
             // Uncompressed: the remainder of the frame is the packet.

@@ -65,12 +65,21 @@ public class MicrosoftLogin {
 
     public ResponseEntity<?> redirect(HttpServletResponse response, HttpServletRequest request) throws IOException {
         String SID = utilset.GetSessionUUID(request,strictIpResolver.getStrictClientIp(request));
+        // 将 state 绑定到本次会话（短时效、单次消费），回调时校验，防 OAuth 登录 CSRF
+        redisService.setValueWithExpiration("ms_oauth_state:" + SID, "1", 10, TimeUnit.MINUTES);
         String authorization_endpoint = PAPI().getString("authorization_endpoint");
         String url = authorization_endpoint+"?client_id="+appid+"&prompt=consent&redirect_uri="+redirect_uri+"&response_type=code+id_token&scope=user.read+openid+profile+email&response_mode=form_post&state="+SID+"&nonce="+utilset.RandomString(8);
         return respond.respond(MediaType.APPLICATION_JSON, 200,"u",url);
     }
 
     public ResponseEntity<?> MicrosoftLogin(HttpServletResponse response,HttpServletRequest request, String code, String id_token, String state) throws IOException {
+        // 校验 OAuth state，防止登录 CSRF / 授权码绑定缺陷
+        if (state == null || redisService.getValue("ms_oauth_state:" + state) == null) {
+            response.sendRedirect(HOST + "/#/login?error=401");
+            return null;
+        }
+        redisService.deleteValue("ms_oauth_state:" + state);
+
         OkHttpClient client = new OkHttpClient();
         FormBody formBody = new FormBody.Builder()
                 .add("client_id", appid)
@@ -128,8 +137,9 @@ public class MicrosoftLogin {
 //            return ResponseEntity.ok(USER);
         }
         // Check if user is banned
-        BanUserList banUserList = banUserRepository.LEVE450TRUE(accounts.getUid());
-        if (banUserList != null) {
+        java.util.List<BanUserList> banUserLists = banUserRepository.LEVE450TRUE(accounts.getUid());
+        if (!banUserLists.isEmpty()) {
+            BanUserList banUserList = banUserLists.getFirst();
             return respond.respond(MediaType.APPLICATION_JSON, 401, "message", "异常等级LEVEL" + banUserList.getType() +
                             ",异常原因" + banUserList.getReason() + ",处罚ID" + banUserList.getBanID() + "账户状态异常杂鱼喵!",
                     "timestamp", LocalDateTime.now());
@@ -173,6 +183,8 @@ public class MicrosoftLogin {
         cookie.setPath("/");
         cookie.setDomain(HOST.replace("http://", "").replace("https://", "").replaceAll(":\\d+", "").replace("/", ""));
         cookie.setMaxAge(7 * 24 * 60 * 60);
+        cookie.setHttpOnly(true);
+        cookie.setAttribute("SameSite", "Lax");
         response.addCookie(cookie);
         response.sendRedirect(HOST + "/#/");
         return null;

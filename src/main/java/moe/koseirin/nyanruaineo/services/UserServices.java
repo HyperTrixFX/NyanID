@@ -5,7 +5,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import moe.koseirin.nyanruaineo.NyanIdApplication;
 import moe.koseirin.nyanruaineo.entity.Accounts;
-import moe.koseirin.nyanruaineo.entity.BanUserList;
 import moe.koseirin.nyanruaineo.entity.NyanIDuser;
 import moe.koseirin.nyanruaineo.entity.UserDevices;
 import moe.koseirin.nyanruaineo.repository.AccountsRepository;
@@ -15,6 +14,7 @@ import moe.koseirin.nyanruaineo.utils.EmailHelper.EmailService;
 import moe.koseirin.nyanruaineo.utils.System.EnumList.EmailBody;
 import moe.koseirin.nyanruaineo.utils.System.EnumList.UUIDtype;
 import moe.koseirin.nyanruaineo.utils.RedisUtils.RedisService;
+import moe.koseirin.nyanruaineo.utils.PasswordHasher;
 import moe.koseirin.nyanruaineo.utils.Respond;
 import moe.koseirin.nyanruaineo.utils.SqlService.NyanidUserService;
 import moe.koseirin.nyanruaineo.utils.SqlService.UserDevicesService;
@@ -52,8 +52,6 @@ public class UserServices {
 
     private final NyanidUserService nyanidUserService;
 
-    private final BanUserRepository banUserRepository;
-
     private final UserDevicesRepository userDevicesRepository;
 
     private final UserDevicesService userDevicesService;
@@ -61,11 +59,10 @@ public class UserServices {
     private final StrictIpResolver strictIpResolver;
 
     private final utilset utilset;
+
+    private final PasswordHasher passwordHasher;
     
     private final Respond respond;
-
-    @Value("${NyanidSetting.encryptionKey}")
-    private String encryptionKey;
 
     @Value("${NyanidSetting.TurnstileSecretKey}")
     private String TurnstileSecretKey;
@@ -89,7 +86,7 @@ public class UserServices {
 /**
  * Constructor for UserServices class that initializes various services and repositories required for user management.
  */
-    public UserServices(AccountsRepository accountsRepository, EmailService emailService, RedisService redisService, UserService userService, NyanidUserService nyanidUserService, BanUserRepository banUserRepository, UserDevicesRepository userDevicesRepository, UserDevicesService userDevicesService, StrictIpResolver strictIpResolver, utilset utilset, Respond respond) {
+    public UserServices(AccountsRepository accountsRepository, EmailService emailService, RedisService redisService, UserService userService, NyanidUserService nyanidUserService, UserDevicesRepository userDevicesRepository, UserDevicesService userDevicesService, StrictIpResolver strictIpResolver, utilset utilset, PasswordHasher passwordHasher, Respond respond) {
         // Assigning the accounts repository instance
         this.accountsRepository = accountsRepository;
         // Assigning the email service instance
@@ -100,8 +97,6 @@ public class UserServices {
         this.userService = userService;
         // Assigning the NyanID user service instance
         this.nyanidUserService = nyanidUserService;
-        // Assigning the ban user repository instance
-        this.banUserRepository = banUserRepository;
         // Assigning the user devices repository instance
         this.userDevicesRepository = userDevicesRepository;
         // Assigning the user devices service instance
@@ -110,6 +105,8 @@ public class UserServices {
         this.strictIpResolver = strictIpResolver;
         // Assigning the utility set instance
         this.utilset = utilset;
+        // Assigning the password hasher instance
+        this.passwordHasher = passwordHasher;
         // Assigning the response service instance
         this.respond = respond;
     }
@@ -161,13 +158,13 @@ public class UserServices {
                 return respond.respond(MediaType.APPLICATION_JSON,403, "message","您的密码至少包含一个大写字母(A-Z),包含一个小写字母(a-z),包含一个数字(0-9),包含一个特殊字符,且长度至少为 9 个字符喵!","timestamp", LocalDateTime.now());
             }
             TurnstileResponse turnstileResponse = TurnstileService.validateToken(idempotencyKey,TurnstileSecretKey,strictIpResolver.getStrictClientIp(request));
-            if (!turnstileResponse.isSuccess() && !Objects.equals(turnstileResponse.getAction(), "registerEvent")){
+            if (!turnstileResponse.isSuccess() || !Objects.equals(turnstileResponse.getAction(), "registerEvent")){
                 return respond.respond(MediaType.APPLICATION_JSON,401, "message","请先通过Cloudflare Turnstile安全验证喵!","timestamp", LocalDateTime.now());
             }
             String seed = utilset.RandomString(8);
             String uid = utilset.GenerateUUID(UUIDtype.NyanID,true, seed+Base64.getEncoder().encodeToString(email.getBytes(StandardCharsets.UTF_8)));
             String VerificationCode = utilset.RandomString(128);
-            String LockPassword = utilset.HMACSHA256(encryptionKey,password);
+            String LockPassword = passwordHasher.hash(password);
             emailService.sendmail(email,email, EmailBody.RegisterBody.getBody().replace("${link}",HOST + "/#/verification/" + VerificationCode));
             JSONObject json = new JSONObject();
             json.put("uid", uid);
@@ -179,7 +176,8 @@ public class UserServices {
             return respond.respond(MediaType.APPLICATION_JSON,200, "message","请前往邮箱验证然后完成注册,注意,链接有效期只有5分钟,请尽快验证喵!","timestamp", LocalDateTime.now());
 
         }else {
-            return respond.respond(MediaType.APPLICATION_JSON,403, "message","用户名或邮箱已被注册喵!","timestamp", LocalDateTime.now());
+            // 防账号枚举：已注册时返回与成功一致的无差别文案
+            return respond.respond(MediaType.APPLICATION_JSON,200, "message","请前往邮箱验证然后完成注册,注意,链接有效期只有5分钟,请尽快验证喵!","timestamp", LocalDateTime.now());
         }
     }
 
@@ -281,7 +279,7 @@ public class UserServices {
             }
         // Validate Cloudflare Turnstile captcha
             TurnstileResponse turnstileResponse = TurnstileService.validateToken(idempotencyKey, TurnstileSecretKey, strictIpResolver.getStrictClientIp(request));
-            if (!turnstileResponse.isSuccess() && !"LoginEvent".equals(turnstileResponse.getAction())) {
+            if (!turnstileResponse.isSuccess() || !"LoginEvent".equals(turnstileResponse.getAction())) {
                 return respond.respond(MediaType.APPLICATION_JSON, 401, "message", "请先通过Cloudflare Turnstile安全验证喵!", "timestamp", LocalDateTime.now());
             }
         // Check if account is banned
@@ -313,23 +311,18 @@ public class UserServices {
                 return respond.respond(MediaType.APPLICATION_JSON, 401, "message", "账户不存在或密码错误喵!", "timestamp", LocalDateTime.now());
             }
         // Verify password
-            String pwd = utilset.HMACSHA256(encryptionKey, password);
-            if (!pwd.equals(accounts.getPassword())) {
+            if (!passwordHasher.matches(password, accounts.getPassword())) {
             // Increment failed attempt count
                 redisService.setValueWithExpiration(attemptCountKey, String.valueOf(attemptCount + 1), 300, TimeUnit.SECONDS);
                 return respond.respond(MediaType.APPLICATION_JSON, 401, "message", "账户不存在或密码错误喵!", "timestamp", LocalDateTime.now());
             }
+        // 旧 HMAC 散列透明迁移为 PBKDF2
+            if (passwordHasher.isLegacy(accounts.getPassword())) {
+                accountsRepository.UpdatePassword(accounts.getUid(), passwordHasher.hash(password));
+            }
         // Reset failed attempt count on successful login
             redisService.deleteValue(attemptCountKey);
-
-        // Check if user is banned
-            BanUserList banUserList = banUserRepository.LEVE450TRUE(accounts.getUid());
-            if (banUserList != null) {
-                return respond.respond(MediaType.APPLICATION_JSON, 401, "message", "异常等级LEVEL" + banUserList.getType() +
-                    ",异常原因" + banUserList.getReason() + ",处罚ID" + banUserList.getBanID() + "账户状态异常杂鱼喵!",
-                    "timestamp", LocalDateTime.now());
-            }
-        // Handle 2FA authentication
+            // Handle 2FA authentication
             if (accounts.getSecretKey() != null) {
                 String eid = utilset.RandomString(32);
                 JSONObject object = new JSONObject();
@@ -420,6 +413,11 @@ public class UserServices {
         if (!verifyCode.matches("[0-9]{3,7}")){
             return respond.respond(MediaType.APPLICATION_JSON,401,"message","This code type is not support","timestamp", LocalDateTime.now());
         }
+        // 2FA 失败锁定：防止对 TOTP 六位码无限暴力尝试
+        String clientIp = strictIpResolver.getStrictClientIp(request);
+        if (redisService.getValue("2fa_lock:" + clientIp) != null) {
+            return respond.respond(MediaType.APPLICATION_JSON,429,"message","尝试次数过多，请稍后再试","timestamp", LocalDateTime.now());
+        }
     // Decrypt the token using private key
         String DecryptToken;
         try {
@@ -461,11 +459,28 @@ public class UserServices {
             // Return success response with encrypted access token
                 return respond.respond(MediaType.APPLICATION_JSON,200, "access_token",utilset.encrypt(tokend, publicKey), "timestamp",LocalDateTime.now());
             }else {
+                if (increment2faFails(clientIp) >= 5) {
+                    redisService.setValueWithExpiration("2fa_lock:" + clientIp, "1", 15, TimeUnit.MINUTES);
+                }
                 return respond.respond(MediaType.APPLICATION_JSON,401,"message","2FA验证码已失效或登录时间过期","timestamp", LocalDateTime.now());
             }
         } else {
             return respond.respond(MediaType.APPLICATION_JSON,401,"message","登录时间过期","timestamp", LocalDateTime.now());
         }
+    }
+
+    private int increment2faFails(String ip) {
+        String failKey = "2fa_fail:" + ip;
+        int fails = 1;
+        Object v = redisService.getValue(failKey);
+        if (v != null) {
+            try {
+                fails = Integer.parseInt(v.toString()) + 1;
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        redisService.setValueWithExpiration(failKey, String.valueOf(fails), 15, TimeUnit.MINUTES);
+        return fails;
     }
 
 

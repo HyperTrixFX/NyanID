@@ -17,6 +17,7 @@ import moe.koseirin.nyanruaineo.utils.RedisUtils.RedisService;
 import moe.koseirin.nyanruaineo.utils.SqlService.UserDevicesService;
 import moe.koseirin.nyanruaineo.entity.UserDevices;
 import moe.koseirin.nyanruaineo.entity.Yggdrasil;
+import moe.koseirin.nyanruaineo.utils.PasswordHasher;
 import moe.koseirin.nyanruaineo.utils.Respond;
 import moe.koseirin.nyanruaineo.utils.WebMvc.StrictIpResolver;
 import moe.koseirin.nyanruaineo.utils.utilset;
@@ -46,9 +47,8 @@ public class Authserver {
     private final utilset utilset;
     private final StrictIpResolver strictIpResolver;
     private final Respond respond;
+    private final PasswordHasher passwordHasher;
 
-    @Value("${NyanidSetting.encryptionKey}")
-    private String encryptionKey;
     @Value("${yggdrasil.APILocation}")
     private String APILocation;
     @Value("${yggdrasil.privateKey}")
@@ -58,7 +58,7 @@ public class Authserver {
     private final Map<String, Authserver.Const> constMap = new HashMap<>();
     public String EventID = "LoEvent1";
 
-    public Authserver(AccountsRepository accountsRepository, UserDevicesService userDevicesService, UserDevicesRepository userDevicesRepository, YggdrasilRepository yggdrasilRepository, YggdrasilPlayerRepository yggdrasilPlayerRepository, BanUserRepository banUserRepository, RedisService redisService, utilset utilset, StrictIpResolver strictIpResolver, Respond respond) {
+    public Authserver(AccountsRepository accountsRepository, UserDevicesService userDevicesService, UserDevicesRepository userDevicesRepository, YggdrasilRepository yggdrasilRepository, YggdrasilPlayerRepository yggdrasilPlayerRepository, BanUserRepository banUserRepository, RedisService redisService, utilset utilset, StrictIpResolver strictIpResolver, Respond respond, PasswordHasher passwordHasher) {
         this.accountsRepository = accountsRepository;
         this.userDevicesService = userDevicesService;
         this.userDevicesRepository = userDevicesRepository;
@@ -69,6 +69,7 @@ public class Authserver {
         this.utilset = utilset;
         this.strictIpResolver = strictIpResolver;
         this.respond = respond;
+        this.passwordHasher = passwordHasher;
     }
 
     @PostMapping("authenticate")
@@ -119,8 +120,7 @@ public class Authserver {
         }
 
         String pwd = accountsRepository.LoginByEmail(email);
-        String lockpwd = utilset.HMACSHA256(encryptionKey, password);
-        if (!Objects.equals(lockpwd, pwd)) {
+        if (!passwordHasher.matches(password, pwd)) {
             if (constMap.get(email) != null) {
                 constMap.get(email).requestCount++;
             }
@@ -128,6 +128,10 @@ public class Authserver {
         }
 
         String uid = accountsRepository.findByEmail(email);
+        // 旧 HMAC 散列透明迁移为 PBKDF2
+        if (passwordHasher.isLegacy(pwd)) {
+            accountsRepository.UpdatePassword(uid, passwordHasher.hash(password));
+        }
         String MCUUID = yggdrasilRepository.GetPlayerUUID(uid);
         if (MCUUID == null) {
             return respond.respond(MediaType.APPLICATION_JSON, 404, new ErrorResponse("The Yggdrasil account doesn't exist . 杂鱼喵~ ", "Not Found ", "Not Found Yggdrasil account "));
@@ -135,8 +139,9 @@ public class Authserver {
 
         String MCNAME = yggdrasilRepository.GetPlayerNAME(MCUUID);
         String session = request.getSession().getId();
-        if (banUserRepository.findBanIDByUid(uid) != null) {
-            return respond.respond(MediaType.APPLICATION_JSON, 403, new ErrorResponse("此用户已被封禁,封禁码:[" + banUserRepository.findBanIDByUid(uid) + "]杂鱼喵~", "ForbiddenOperationException", "ForbiddenOperationException"));
+        List<String> banIds = banUserRepository.findBanIDByUid(uid, LocalDateTime.now());
+        if (!banIds.isEmpty()) {
+            return respond.respond(MediaType.APPLICATION_JSON, 403, new ErrorResponse("此用户已被封禁,封禁码:[" + banIds.getFirst() + "]杂鱼喵~", "ForbiddenOperationException", "ForbiddenOperationException"));
         }
 
         if (constMap.get(email) != null) {
@@ -162,7 +167,10 @@ public class Authserver {
             } else {
                 if (clientToken.length() == 32) {
                     UserDevices existing = userDevicesRepository.getByINFO(clientToken);
-                    if (existing == null) {
+                    // H1：clientToken 可能被多个账号复用（同一启动器换账号）。命中设备必须校验归属；
+                    // 归属他人时不得复用其 accessToken，改签新 clientToken + 新 accessToken。
+                    if (existing == null || existing.getUid() == null || !existing.getUid().equals(uid)) {
+                        String issuedClientToken = (existing == null) ? clientToken : utilset.RandomString(32);
                         String accessToken = utilset.RandomString(32);
                         UserDevices uD = new UserDevices();
                         uD.setUid(uid);
@@ -172,10 +180,10 @@ public class Authserver {
                         uD.setIp(IP);
                         uD.setIsActive(true);
                         uD.setSession(session);
-                        uD.setClientId(clientToken);
+                        uD.setClientId(issuedClientToken);
                         uD.setCreateTime(LocalDateTime.now());
                         userDevicesService.save(uD);
-                        return respond.respond(MediaType.APPLICATION_JSON,200,(Response(MCUUID, MCNAME, utilset.encrypt(accessToken, publicKey), clientToken, yggdrasilPlayerRepository.getSkinTexturesType(MCUUID), requestUser, uid)));
+                        return respond.respond(MediaType.APPLICATION_JSON,200,(Response(MCUUID, MCNAME, utilset.encrypt(accessToken, publicKey), issuedClientToken, yggdrasilPlayerRepository.getSkinTexturesType(MCUUID), requestUser, uid)));
                     } else {
                         return respond.respond(MediaType.APPLICATION_JSON,200,(Response(MCUUID, MCNAME, utilset.encrypt(existing.getToken(), publicKey), clientToken, yggdrasilPlayerRepository.getSkinTexturesType(MCUUID), requestUser, uid)));
                     }
@@ -197,7 +205,7 @@ public class Authserver {
             userDevices.setClientId(ClientToken);
             userDevices.setCreateTime(LocalDateTime.now());
             userDevicesService.save(userDevices);
-            return respond.respond(MediaType.APPLICATION_JSON,200,(Response(MCUUID, MCNAME, utilset.encrypt(accessToken, privateKey), ClientToken, yggdrasilPlayerRepository.getSkinTexturesType(MCUUID), requestUser, uid)));
+            return respond.respond(MediaType.APPLICATION_JSON,200,(Response(MCUUID, MCNAME, utilset.encrypt(accessToken, publicKey), ClientToken, yggdrasilPlayerRepository.getSkinTexturesType(MCUUID), requestUser, uid)));
         }
     }
 
