@@ -21,11 +21,11 @@ import java.util.List;
 @Repository
 public interface BanUserRepository extends JpaRepository<BanUserList, String>, Serializable {
 
-    @Query(value = "SELECT a FROM BanUserList a WHERE a.uid = ?1 AND a.isActive = true AND a.Type= 4 or a.Type = 5 or a.Type = 0")
-    BanUserList LEVE450TRUE(String uid);
+    @Query(value = "SELECT a FROM BanUserList a WHERE a.uid = ?1 AND a.isActive = true AND (a.Type = 4 OR a.Type = 5 OR a.Type = 0)")
+    List<BanUserList> LEVE450TRUE(String uid);
 
-    @Query(value = "SELECT a.BanID FROM BanUserList a WHERE a.uid = ?1 AND a.isActive = true")
-    String findBanIDByUid(String uid);
+    @Query(value = "SELECT a.BanID FROM BanUserList a WHERE a.uid = ?1 AND a.isActive = true AND (a.ExpireTime IS NULL OR a.ExpireTime > ?2) ORDER BY a.BanTime DESC")
+    List<String> findBanIDByUid(String uid, LocalDateTime now);
 
     @Query(value = "SELECT COUNT(*) AS nums FROM BanUserList WHERE uid = ?1")
     int COUNTByUid(String uid);
@@ -37,7 +37,7 @@ public interface BanUserRepository extends JpaRepository<BanUserList, String>, S
      * 查询某个目标仍然生效的游戏登录封禁（type 5/6），过期时间已过的不算。
      * {@code targetType} 为 0 时，历史数据里 {@code TargetType IS NULL} 的旧行也视为 UID 封禁。
      */
-    @Query("SELECT b FROM BanUserList b WHERE b.isActive = true AND (b.Type = 5 OR b.Type = 20) " +
+    @Query("SELECT b FROM BanUserList b WHERE b.isActive = true AND (b.Type = 5 OR b.Type = 6 OR b.Type = 20) " +
             "AND (b.ExpireTime IS NULL OR b.ExpireTime > ?3) " +
             "AND b.uid = ?1 " +
             "AND (b.TargetType = ?2 OR (b.TargetType IS NULL AND ?2 = 0)) " +
@@ -49,4 +49,18 @@ public interface BanUserRepository extends JpaRepository<BanUserList, String>, S
     @Transactional
     @Query("UPDATE BanUserList b SET b.isActive = false WHERE b.isActive = true AND b.ExpireTime IS NOT NULL AND b.ExpireTime <= ?1")
     int deactivateExpired(LocalDateTime now);
+
+    /** 手动解封：把某个目标所有仍在生效的封禁置为失效。 */
+    @Modifying
+    @Transactional
+    @Query("UPDATE BanUserList b SET b.isActive = false WHERE b.uid = ?1 AND b.isActive = true")
+    int deactivateByUid(String uid);
+
+    /** 是否存在该 uid 下仍在生效的封禁（活跃异常）。 */
+    @Query("SELECT COUNT(b) > 0 FROM BanUserList b WHERE b.uid = ?1 AND b.isActive = true")
+    boolean existsByUidAndIsActiveTrue(String uid);
+
+    /** 分页列出所有仍在生效的封禁。 */
+    @Query("SELECT b FROM BanUserList b WHERE b.isActive = true")
+    Page<BanUserList> findActiveBans(Pageable pageable);
 }

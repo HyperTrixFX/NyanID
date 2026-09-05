@@ -6,8 +6,11 @@ package moe.koseirin.nyanruaineo.server.V3Contorller;
  */
 
 import moe.koseirin.nyanruaineo.Minecraft.config.cfg.BackendServer;
+import moe.koseirin.nyanruaineo.dto.PlayerKickDTO;
+import moe.koseirin.nyanruaineo.dto.PlayerTransferDTO;
 import moe.koseirin.nyanruaineo.utils.System.PermissionNodes;
 import moe.koseirin.nyanruaineo.services.PermissionService;
+import moe.koseirin.nyanruaineo.repository.BanUserRepository;
 import moe.koseirin.nyanruaineo.repository.UserDevicesRepository;
 import moe.koseirin.nyanruaineo.services.impl.ProxyFuncImpl;
 import moe.koseirin.nyanruaineo.utils.Respond;
@@ -27,6 +30,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 
 
 @RestController
@@ -37,16 +41,18 @@ public class ProxyController {
     private final PermissionService permissionService;
     private final utilset utilset;
     private final UserDevicesRepository userDevicesRepository;
+    private final BanUserRepository banUserRepository;
     private final Respond respond;
 
     @Value("${yggdrasil.privateKey}")
     private String privateKey;
 
-    public ProxyController(ProxyFuncImpl proxyFunc, PermissionService permissionService, utilset utilset, UserDevicesRepository userDevicesRepository, Respond respond) {
+    public ProxyController(ProxyFuncImpl proxyFunc, PermissionService permissionService, utilset utilset, UserDevicesRepository userDevicesRepository, BanUserRepository banUserRepository, Respond respond) {
         this.proxyFunc = proxyFunc;
         this.permissionService = permissionService;
         this.utilset = utilset;
         this.userDevicesRepository = userDevicesRepository;
+        this.banUserRepository = banUserRepository;
         this.respond = respond;
     }
 
@@ -82,6 +88,42 @@ public class ProxyController {
             return forbidden();
         }
         return proxyFunc.removeServer(uid);
+    }
+
+
+    // 代理配置管理
+    @GetMapping("/config")
+    public ResponseEntity<?> listConfigs(@RequestHeader(value = "Authorization", required = false) String authorization) {
+        if (!authorized(authorization)) {
+            return forbidden();
+        }
+        return ResponseEntity.ok(proxyFunc.getProxyConfigs());
+    }
+
+    @PutMapping("/config")
+    public ResponseEntity<?> updateConfigs(@RequestHeader(value = "Authorization", required = false) String authorization, @RequestBody Map<String, String> updates) {
+        if (!authorized(authorization)) {
+            return forbidden();
+        }
+        return proxyFunc.updateProxyConfigs(updates);
+    }
+
+
+    // 玩家管理（转移 / 踢出）
+    @PostMapping("/players/transfer")
+    public ResponseEntity<?> transferPlayer(@RequestHeader(value = "Authorization", required = false) String authorization, @RequestBody PlayerTransferDTO dto) {
+        if (!authorized(authorization)) {
+            return forbidden();
+        }
+        return proxyFunc.transferPlayer(dto == null ? null : dto.getPlayer(), dto == null ? null : dto.getTargetServer());
+    }
+
+    @PostMapping("/players/kick")
+    public ResponseEntity<?> kickPlayer(@RequestHeader(value = "Authorization", required = false) String authorization, @RequestBody PlayerKickDTO dto) {
+        if (!authorized(authorization)) {
+            return forbidden();
+        }
+        return proxyFunc.kickPlayer(dto == null ? null : dto.getPlayer(), dto == null ? null : dto.getReason());
     }
 
 
@@ -132,7 +174,8 @@ public class ProxyController {
 
     private boolean authorized(String authorization) {
         String uid = resolveUid(authorization);
-        return uid != null && permissionService.hasPermission(uid, PermissionNodes.PROXY_ADMIN);
+        return uid != null && !banUserRepository.existsByUidAndIsActiveTrue(uid)
+                && permissionService.hasPermission(uid, PermissionNodes.PROXY_ADMIN);
     }
 
     private ResponseEntity<?> forbidden() {

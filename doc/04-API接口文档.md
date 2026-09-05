@@ -127,6 +127,27 @@ Event: <操作类型>
 | --- | --- | --- | --- |
 | GET | `/user/violation/history` | -（需认证） | 违规/封禁历史 |
 
+> **活跃异常（只读）**：账号存在生效中的封禁时仍可登录，但为只读——`/userdata`（改昵称/用户名/简介/绑定/头像）、`/user/2fa/*`（开关 2FA）、`/forgetpwd` + `/resetpwd`（找回/重置密码）均返回 `403 账户状态异常，资料为只读…`。详见 [08-权限与封禁系统](./08-权限与封禁系统.md)。
+
+### 工单（用户自助，`/api/zako/v1/ticket`）
+
+只需 `Authorization: Bearer <token>`（token→uid），不校验管理权限节点；且**不挂 `AuthenticateCheck`**，以便被封用户也能提交禁封申诉。
+
+| 方法 | 路径 | 请求体 | 说明 |
+| --- | --- | --- | --- |
+| POST | `/ticket` | `TicketCreateDTO` | 提交工单 |
+| GET | `/ticket` | - | 我的全部工单 |
+| GET | `/ticket/{ticketId}` | - | 我的某一单（校验归属） |
+
+**TicketCreateDTO**
+
+```json
+{ "type": 1, "description": "申诉内容" }
+```
+
+- `type` 仅接受 1（禁封申诉）/ 2（开发者申请）/ 3（账号安全申诉）；`description` 必填且 ≤ 155 字符。
+- 提交规则：三类工单都按「同类型」查重——已有未结束的同类型工单时禁止重复申请（返回 409）；`type=1` 还需账户存在活跃异常（生效中的封禁，否则 403）；`type=2` 若用户已是开发者（`IsDeveloper=true`）则禁止（返回 409）。详见 [12-用户管理与工单系统](./12-用户管理与工单系统.md)。
+
 ### 占位
 
 | 方法 | 路径 | 说明 |
@@ -163,16 +184,88 @@ Event: <操作类型>
 
 | 方法 | 路径 | 请求 | 说明 |
 | --- | --- | --- | --- |
-| GET | `/servers` | - | 列出所有后端服务器 |
+| GET | `/servers` | - | 列出所有后端服务器（含运行时在线状态） |
 | POST | `/servers` | `BackendServer` | 新增后端服务器 |
 | PUT | `/servers/{uid}` | `BackendServer` | 更新指定后端 |
 | DELETE | `/servers/{uid}` | - | 删除指定后端 |
 
-**BackendServer**
+**BackendServer**（写入 `POST`/`PUT` 请求体）
 
 ```json
 { "uid": "lobby-001", "priority": 1, "name": "lobby", "host": "localhost", "port": 25566 }
 ```
+
+**GET `/servers` 响应**（在静态字段基础上附加运行时状态）：
+
+```json
+{
+  "uid": "lobby-001", "priority": 1, "name": "lobby", "host": "localhost", "port": 25566,
+  "online": true, "onlineCount": 3,
+  "players": [ { "username": "Notch", "uuid": "..." } ]
+}
+```
+
+- `online`：后端是否在线（TCP 探测可达，5 秒缓存）。
+- `onlineCount`：当前连接到该后端的玩家数量。
+- `players`：当前连接到该后端的玩家列表（`username` + `uuid`）。
+
+#### 代理配置管理
+
+| 方法 | 路径 | 请求体 | 说明 |
+| --- | --- | --- | --- |
+| GET | `/config` | - | 列出可编辑的代理配置项（`key` + `value` + `type`） |
+| PUT | `/config` | `{ "配置键": "值", ... }` | 批量更新配置（严格类型校验，写后热重载） |
+
+可编辑的配置键（不含 `proxy.backend.servers`，该键走 `/servers` 专用接口）：
+
+| 键 | 类型 | 校验 |
+| --- | --- | --- |
+| `proxy.port` | int | 1–65535 |
+| `proxy.maxPlayers` | int | ≥ 0 |
+| `proxy.name` | string | 非空 |
+| `proxy.online-mode` | boolean | `true`/`false` |
+| `proxy.ip-forward` | boolean | `true`/`false` |
+| `proxy.forge-support` | boolean | `true`/`false` |
+| `proxy.motd` | json | 可解析为 `MotdConfig` |
+| `proxy.tablist` | json | 可解析为 `TabListConfig` |
+| `proxy.firewall` | json | 可解析为 `FirewallConfig` |
+| `proxy.kick-message` | json | 可解析为 `KickMessageConfig` |
+
+所有值长度 ≤ 800（`SystemConfig.configValue` 为 `varchar(800)`）。
+
+**PUT `/config` 示例**
+
+```json
+{ "proxy.name": "NekoProxy", "proxy.port": "25566", "proxy.online-mode": "false" }
+```
+
+- JSON 配置项的值须是 JSON 字符串（例如 `"proxy.motd": "{\"lines\":[...]}"`）。
+- 写库后调用缓存重载使读取方立即使用新值；`proxy.port` 等监听相关项需重启代理才真正生效。
+
+#### 玩家管理（转移 / 踢出）
+
+| 方法 | 路径 | 请求体 | 说明 |
+| --- | --- | --- | --- |
+| POST | `/players/transfer` | `PlayerTransferDTO` | 将在线玩家转移到指定子服务器（先校验玩家与目的服务器状态） |
+| POST | `/players/kick` | `PlayerKickDTO` | 踢出在线玩家（原因可编辑） |
+
+**PlayerTransferDTO**
+
+```json
+{ "player": "Notch", "targetServer": "survival" }
+```
+
+- `player`：用户名或 UUID（服务端自动识别）。
+- `targetServer`：服务器名或 uid（服务端自动识别）。
+
+**PlayerKickDTO**
+
+```json
+{ "player": "Notch", "reason": "违规行为" }
+```
+
+- `player`：用户名或 UUID。
+- `reason`：可选，缺省为「Kicked by an administrator」，最长 256 字符。
 
 #### 权限管理
 
@@ -181,6 +274,49 @@ Event: <操作类型>
 | GET | `/permissions` | `uid` | 查询用户权限节点集合 |
 | POST | `/permissions` | `uid`、`node` | 授予权限节点 |
 | DELETE | `/permissions` | `uid`、`node` | 回收权限节点 |
+
+### 用户管理（`/api/zako/v3/users`，需 `nyanid.admin.user` 权限）
+
+| 方法 | 路径 | 请求 | 说明 |
+| --- | --- | --- | --- |
+| GET | `/users` | query `keyword`（可选）、`page`、`size` | 分页列出 / 搜索用户 |
+| GET | `/users/banned` | query `page`、`size` | 分页列出当前生效封禁的用户 |
+| GET | `/users/developers` | query `page`、`size` | 分页列出开发者用户 |
+| GET | `/users/{uid}` | path `uid` | 用户详情 |
+| PUT | `/users/{uid}` | `UserEditDTO` | 编辑资料（只更新非空字段） |
+| PUT | `/users/{uid}/active` | query `active` | 账号启停 |
+| PUT | `/users/{uid}/developer` | query `active` | 设置 / 取消开发者标志 |
+| POST | `/users/{uid}/ban` | query `reason`、`type`、`expire`（均可选） | 封禁（默认死封 type=6） |
+| DELETE | `/users/{uid}/ban` | - | 解封该账号全部生效封禁 |
+| GET | `/users/{uid}/permissions` | - | 查询权限节点集合 |
+| POST | `/users/{uid}/permissions` | query `node` | 授予权限节点 |
+| DELETE | `/users/{uid}/permissions` | query `node` | 回收权限节点 |
+
+**UserEditDTO**
+
+```json
+{ "nickname": "...", "description": "...", "exp": 100, "isDeveloper": false }
+```
+
+> 列表与详情只返回安全字段，不暴露密码/密钥/设备 token。
+
+### 工单管理（`/api/zako/v3/tickets`，需 `nyanid.admin.ticket` 权限）
+
+| 方法 | 路径 | 请求 | 说明 |
+| --- | --- | --- | --- |
+| GET | `/tickets` | query `status`（可选）、`page`、`size` | 分页列出工单，可按状态过滤 |
+| GET | `/tickets/{ticketId}` | path | 查看一单 |
+| PUT | `/tickets/{ticketId}` | `TicketHandleDTO` | 处理工单（状态 / 处理人 / 回复），仅 `PENDING` 可处理 |
+
+**TicketHandleDTO**
+
+```json
+{ "status": "APPROVED", "handlerUid": "<管理员uid>", "reply": "审核通过" }
+```
+
+- 仅 `PENDING` 可处理；非 `PENDING`（含 `PROCESSING`）返回 `409 工单已处理，无法再次修改`。
+
+> 详见 [12-用户管理与工单系统](./12-用户管理与工单系统.md)。
 
 ### 其他 V3 控制器
 

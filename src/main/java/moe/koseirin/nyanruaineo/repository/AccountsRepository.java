@@ -26,9 +26,6 @@ public interface AccountsRepository extends JpaRepository<Accounts, String>, Ser
     @Query(value = "SELECT a FROM Accounts a WHERE a.MicrosoftAccount = ?1")
     Accounts GetMicrosoftUser(String id);
 
-    @Query(value = "SELECT uid FROM Accounts WHERE uid = ?1 and isActive = true  or email = ?1 or username = ?1")
-    Accounts find(String info);
-
     @Query(value = "SELECT email FROM Accounts WHERE uid = ?1 and isActive = true ")
     String GetEmailByUid(String uid);
 
@@ -80,4 +77,19 @@ public interface AccountsRepository extends JpaRepository<Accounts, String>, Ser
             @Param("keyword") String keyword,
             Pageable pageable
     );
+
+    /** 按用户名/邮箱/UID/绑定信息模糊或精确检索，用于管理面板。 */
+    @Query("SELECT u FROM Accounts u WHERE " +
+            "LOWER(u.username) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+            "LOWER(u.email) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+            "u.uid = :keyword OR u.bind = :keyword")
+    Page<Accounts> searchAll(
+            @Param("keyword") String keyword,
+            Pageable pageable
+    );
+
+    @Modifying
+    @Transactional
+    @Query("UPDATE Accounts a SET a.isActive = ?1 WHERE a.uid = ?2")
+    void UpdateActive(Boolean active, String uid);
 }

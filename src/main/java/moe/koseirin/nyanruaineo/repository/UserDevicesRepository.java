@@ -82,4 +82,6 @@ public interface UserDevicesRepository extends JpaRepository<UserDevices, String
     void SetActiveIsFalse(String info);
     @Query("SELECT u FROM UserDevices u WHERE u.uid = ?1")
     Page<UserDevices> searchByUid(String keyword,Pageable pageable);
+
+    long countByUid(String uid);
 }

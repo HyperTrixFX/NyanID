@@ -10,7 +10,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import moe.koseirin.nyanruaineo.utils.ErrorUtils.Error;
 import moe.koseirin.nyanruaineo.utils.ErrorUtils.ErrorCode;
-import moe.koseirin.nyanruaineo.repository.BanUserRepository;
 import moe.koseirin.nyanruaineo.repository.UserDevicesRepository;
 import moe.koseirin.nyanruaineo.utils.utilset;
 import org.jspecify.annotations.NonNull;
@@ -30,15 +29,13 @@ public class AuthenticateCheck implements HandlerInterceptor {
     @Value("${yggdrasil.privateKey}")
     private String  privateKey;
 
-    private final BanUserRepository banUserRepository;
     private final utilset utilset;
 
 
 
     private final UserDevicesRepository userDevicesRepository;
 
-    public AuthenticateCheck(BanUserRepository banUserRepository, utilset utilset, UserDevicesRepository userDevicesRepository) {
-        this.banUserRepository = banUserRepository;
+    public AuthenticateCheck(utilset utilset, UserDevicesRepository userDevicesRepository) {
         this.utilset = utilset;
         this.userDevicesRepository = userDevicesRepository;
     }
@@ -65,10 +62,7 @@ public class AuthenticateCheck implements HandlerInterceptor {
             PrintWriter(response,Err(ErrorCode.Unauthorized.getMessage(),"Zako~Authentication failed, invalid token MiaoWu~ "),ErrorCode.Unauthorized.getCode());
             return false;
         }
-        if (banUserRepository.LEVE450TRUE(userId) != null) {
-            PrintWriter(response,Err(ErrorCode.Unauthorized.getMessage(),"Zako~account is banned for admin MiaoWu~ "),ErrorCode.Unauthorized.getCode());
-            return false;
-        }
+        // 活跃异常账号放行（只读：资料/2FA/密码修改由各服务拦截，登录已在 UserServices 放开）
         return validateEventAndMethod(event, requestMethod, response);
     }
 

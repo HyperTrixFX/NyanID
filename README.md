@@ -23,6 +23,7 @@ NyanID（`moe.koseirin.nyanruaineo`）是一个基于 Spring Boot 的一体化�
 | [09-常见问题与故障排查](./doc/09-常见问题与故障排查.md)                 | FAQ 与排障 |
 | [10-QQ机器人](./doc/10-QQ机器人.md)                                 | QQ 机器人（Qbot） |
 | [11-AI服务](./doc/11-AI服务.md)                                     | AI 聊天服务（AIServices） |
+| [12-用户管理与工单系统](./doc/12-用户管理与工单系统.md)             | V3 用户管理 + 工单（Ticket）系统 |
 
 ## 快速开始
 

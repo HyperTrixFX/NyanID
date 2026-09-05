@@ -20,4 +20,9 @@ public enum TicketStatus {
     TicketStatus(int code) {
         this.code = code;
     }
+
+    /** 是否已结束（终态）：通过 / 拒绝 / 关闭。未结束 = 待处理 / 处理中。 */
+    public boolean isFinished() {
+        return this == APPROVED || this == REJECTED || this == CLOSED;
+    }
 }

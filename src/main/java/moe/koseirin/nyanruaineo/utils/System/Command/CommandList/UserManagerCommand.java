@@ -67,7 +67,7 @@ public class UserManagerCommand implements Command {
                     case "ban":
                         if (!(accountsRepository.GetUser(args[1]) == null)) {
                             Accounts accounts = accountsRepository.GetUser(args[1]);
-                            if (banUserRepository.findBanIDByUid(accounts.getUid()) == null) {
+                            if (banUserRepository.findBanIDByUid(accounts.getUid(), LocalDateTime.now()).isEmpty()) {
                                 String banid = utilset.RandomString(6);
                                 BanUserList banUserList = new BanUserList();
                                 banUserList.setBanID(banid);
