@@ -1,6 +1,6 @@
-# NyanID 项目文档
+# NyanProxy 项目文档
 
-NyanID（`moe.koseirin.nyanruaineo`）是一个基于 Spring Boot 的一体化服务，主要包含：
+NyanProxy（`moe.koseirin.nyanruaineo`）是一个基于 Spring Boot 的一体化Minecraft代理服务，主要包含：
 
 - **用户系统**：注册、登录、二次验证（2FA）、设备管理、资料修改、头像、密码找回。
 - **Yggdrasil 外置登录**：完整实现 `authserver` / `sessionserver` / `textures`，可作为 Minecraft 外置登录服。
@@ -33,50 +33,9 @@ NyanID（`moe.koseirin.nyanruaineo`）是一个基于 Spring Boot 的一体化�
 4. 在 `SystemConfig` 表（或通过代理管理 API）配置 `proxy.backend.servers` 等项后即可启动代理。
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+## 关于项目
+1. 您可以自由编辑该项目来满足您的业务需求，且您需要将您修改后的版本进行开源
+2. 本项目是对BungeeCord与SpringBoot的整合，并添加了亿些小巧思
 
 
 
